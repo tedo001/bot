@@ -169,7 +169,11 @@ def evaluate(policy: LearnedPolicy, episodes: int, seed: int, sims: list[str]) -
                 spec = sample_task(rng, **kw)
                 ok, _ = closed_loop(policy, sim, cams[int(rng.integers(2))], spec, rng,
                                     label_dropout=1.0 if split == "no_labels" else 0.0)
-                ok_by_kind.setdefault(spec.kind, []).append(ok)
+                # Balancing on the ball is a physics limit, not a policy one: in MuJoCo the object rolls
+                # off even when the scripted teacher releases it 0.1 mm from centre, and PyBullet needs
+                # ~1 mm. Report it apart so "stack" measures stacking.
+                group = "stack_on_ball" if spec.kind == "stack" and spec.dst == "sphere" else spec.kind
+                ok_by_kind.setdefault(group, []).append(ok)
             allv = [v for vs in ok_by_kind.values() for v in vs]
             results[f"{kind}/{split}"] = {"success": float(np.mean(allv)), "n": len(allv),
                                          **{k: round(float(np.mean(v)), 3) for k, v in ok_by_kind.items()}}

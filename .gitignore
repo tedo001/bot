@@ -5,5 +5,6 @@ __pycache__/
 venv/
 .idea/
 *.egg-info/
-.vla_train/
-models/
+# training work dirs and models trained from the GUI (the shipped model is vla_dashboard/assets/models)
+/.vla_train/
+/models/

@@ -14,7 +14,7 @@ PyQt6 control dashboard and simulator for a Vision-Language-Action robot pipelin
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python run.py                       # Yaskawa GP7 in PyBullet (falls back to the kinematic sim)
+python run.py                       # Yaskawa GP7 on PyBullet, else MuJoCo, else the 2D sim
 python run.py --robot gp8           # the shorter-reach GP8
 python run.py --egl                 # GPU rendering + full-detail CAD meshes (Linux, GPU driver)
 python run.py --sim kinematic       # lightweight numpy/OpenCV simulator
@@ -79,15 +79,21 @@ python -m vla_dashboard.learning.train --physics-sims mujoco --out models/my_pol
 
 Results of the shipped model (v2), closed loop on new random layouts:
 
-| | Simple sim | Yaskawa GP7 (PyBullet physics) |
-|---|---|---|
-| Training-style phrasings | 98.3% | 96.7% |
-| Held-out phrasings (never seen) | 98.3% | 93.3% |
-| No object labels (colour only) | 98.3% | 86.7% |
-| Refuses unknown objects ("the banana") | 100% | 100% |
-| Full app path (renderer → perception → model) | 24/24 | 11/12 |
+| | Simple sim | GP7 on PyBullet | GP7 on MuJoCo |
+|---|---|---|---|
+| Training-style phrasings | 98.3% | 96.7% | 85.0% |
+| Held-out phrasings (never seen) | 98.3% | 93.3% | 91.7% |
+| No object labels (colour only) | 98.3% | 86.7% | 90.0% |
+| Refuses unknown objects ("the banana") | 100% | 100% | 100% |
+| Full app path (renderer → perception → model) | 24/24 | 11/12 | 11/12 |
 
-60 episodes per row (10 for refusal). The weakest case is stacking in physics without labels (61%); the one full-path failure is balancing the cylinder on the ball.
+60 episodes per row (10 for refusal). 31 of the 34 physics failures are one task: balancing an object on the ball. Every other task succeeds in 322 of 325 physics episodes. Both full-path failures are that task too ("put the blue tube on top of the green orb").
+
+Balancing on the ball is a physics limit:
+* In MuJoCo the object rolls off even when the scripted teacher releases it 0.1 mm from centre.
+* PyBullet holds it if the release is within about 1 mm. The model sees only camera-derived positions and releases a median 6.6 mm off centre.
+
+Training reports this task as `stack_on_ball`, separate from `stack`. Adding MuJoCo demonstrations to training (v3) made no measurable difference over 120 paired tasks per simulator, so v2 remains the shipped model.
 
 The checkpoint is `vla_dashboard/assets/models/vla_act.pt`, with its metrics in `vla_act.json`. In the dashboard the camera view marks the object the model chose (**SRC**) and its destination (**DST**), and the telemetry shows its done probability.
 

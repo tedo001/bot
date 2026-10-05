@@ -24,6 +24,7 @@
       "next_to": 0.938,
       "pick": 1.0,
       "stack": 1.0,
+      "stack_on_ball": 1.0,
       "unknown": 1.0,
       "home": 1.0
     },
@@ -33,6 +34,7 @@
       "next_to": 0.941,
       "stack": 1.0,
       "pick": 1.0,
+      "stack_on_ball": 1.0,
       "home": 1.0
     },
     "kinematic/no_labels": {
@@ -41,6 +43,7 @@
       "pick": 1.0,
       "next_to": 0.944,
       "stack": 1.0,
+      "stack_on_ball": 1.0,
       "unknown": 1.0,
       "home": 1.0
     },
@@ -53,27 +56,63 @@
       "n": 60,
       "pick": 1.0,
       "next_to": 1.0,
-      "stack": 0.875,
+      "stack_on_ball": 0.5,
+      "stack": 1.0,
       "home": 1.0,
       "unknown": 1.0
     },
     "pybullet/heldout_phrasing": {
       "success": 0.9333333333333333,
       "n": 60,
-      "stack": 0.765,
+      "stack_on_ball": 0.25,
       "next_to": 1.0,
       "pick": 1.0,
+      "stack": 0.923,
       "home": 1.0
     },
     "pybullet/no_labels": {
       "success": 0.8666666666666667,
       "n": 60,
       "pick": 1.0,
-      "stack": 0.611,
+      "stack_on_ball": 0.125,
       "unknown": 1.0,
-      "next_to": 0.955
+      "next_to": 0.955,
+      "stack": 1.0
     },
     "pybullet/unknown_object_refusal": {
+      "success": 1.0,
+      "n": 10
+    },
+    "mujoco/train_phrasing": {
+      "success": 0.85,
+      "n": 60,
+      "next_to": 1.0,
+      "stack": 1.0,
+      "pick": 1.0,
+      "stack_on_ball": 0.0,
+      "home": 1.0,
+      "unknown": 1.0
+    },
+    "mujoco/heldout_phrasing": {
+      "success": 0.9166666666666666,
+      "n": 60,
+      "pick": 1.0,
+      "next_to": 1.0,
+      "stack": 0.889,
+      "stack_on_ball": 0.0,
+      "home": 1.0
+    },
+    "mujoco/no_labels": {
+      "success": 0.9,
+      "n": 60,
+      "pick": 1.0,
+      "next_to": 1.0,
+      "stack": 1.0,
+      "stack_on_ball": 0.0,
+      "unknown": 1.0,
+      "home": 1.0
+    },
+    "mujoco/unknown_object_refusal": {
       "success": 1.0,
       "n": 10
     }
@@ -87,11 +126,16 @@
       "success": 0.917,
       "n": 12
     },
-    "note": "renderer -> perception (mock detectors) -> learned policy -> controller; 12 phrasings incl. held-out ones, default + random layouts; measured after the one-to-one label-grounding fix"
+    "mujoco": {
+      "success": 0.917,
+      "n": 12
+    },
+    "note": "renderer -> perception (mock detectors) -> learned policy -> controller; 12 phrasings incl. held-out ones, default + random layouts. The one failure on each physics engine is balancing the cylinder on the ball."
   },
   "version": 2,
   "previous_version_full_stack": {
     "kinematic": "21/24",
     "pybullet": "9/12"
-  }
+  },
+  "reevaluated": "2026-10-05: MuJoCo added; stacking onto the ball reported as stack_on_ball, apart from stack"
 }
