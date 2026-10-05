@@ -47,7 +47,10 @@ def collect(kind: str, episodes: int, workers: int, seed: int) -> dict[str, np.n
 
 
 # ---------------------------------------------------------------- training
-def train(data: dict[str, np.ndarray], vocab_size: int, epochs: int, batch: int, lr: float, seed: int):
+def train(data: dict[str, np.ndarray], vocab_size: int, epochs: int, batch: int, lr: float, seed: int,
+          on_epoch=None, resume_path: Path | None = None):
+    """``on_epoch(model, epoch, val)`` is called after every epoch (checkpointing). If ``resume_path``
+    holds optimizer/scheduler state from an interrupted run, training continues from there."""
     import torch
     import torch.nn.functional as F
 
@@ -75,8 +78,18 @@ def train(data: dict[str, np.ndarray], vocab_size: int, epochs: int, batch: int,
         acc = ((src.argmax(-1) == b["src"]).float().mean() + (dst.argmax(-1) == b["dst"]).float().mean()) / 2
         return l_act, l_done, l_ptr, acc
 
+    start_ep = 0
+    if resume_path is not None and resume_path.is_file():
+        st = torch.load(resume_path, map_location="cpu", weights_only=False)
+        model.load_state_dict(st["model"])
+        opt.load_state_dict(st["opt"])
+        sched.load_state_dict(st["sched"])
+        start_ep = st["epoch"]
+        log.info("resuming from epoch %d (%s)", start_ep, resume_path)
+
     t0 = time.perf_counter()
-    for ep in range(epochs):
+    v = [float("nan")] * 4
+    for ep in range(start_ep, epochs):
         model.train()
         order = torch.from_numpy(np.random.default_rng(seed + ep).permutation(tr_idx))
         tot = 0.0
@@ -94,6 +107,12 @@ def train(data: dict[str, np.ndarray], vocab_size: int, epochs: int, batch: int,
             v = [x.item() if hasattr(x, "item") else x for x in losses(torch.from_numpy(val_idx))]
         log.info("epoch %2d/%d  train %.4f | val act %.4f done %.4f ptr %.4f grounding-acc %.3f  (%.0fs)", ep + 1,
                  epochs, tot / len(order), v[0], v[1], v[2], v[3], time.perf_counter() - t0)
+        if resume_path is not None:  # survive interruptions: everything needed to continue
+            torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(),
+                        "epoch": ep + 1}, resume_path)
+        if on_epoch is not None:
+            on_epoch(model, ep + 1, {"val_action_l1": v[0], "val_done_bce": v[1], "val_pointer_ce": v[2],
+                                     "val_grounding_acc": v[3]})
     return model, {"val_action_l1": v[0], "val_done_bce": v[1], "val_pointer_ce": v[2], "val_grounding_acc": v[3]}
 
 
@@ -206,7 +225,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--kinematic", type=int, default=5000, help="teacher episodes in the kinematic sim")
     ap.add_argument("--pybullet", type=int, default=1500, help="teacher episodes in the PyBullet GP7 sim")
-    ap.add_argument("--epochs", type=int, default=20)
+    ap.add_argument("--epochs", type=int, default=16)
     ap.add_argument("--batch", type=int, default=512)
     ap.add_argument("--lr", type=float, default=2e-3)
     ap.add_argument("--workers", type=int, default=max(1, min(8, mp.cpu_count())))
@@ -214,22 +233,43 @@ def main() -> None:
     ap.add_argument("--full-stack-episodes", type=int, default=12)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", type=Path, default=DEFAULT_CHECKPOINT)
+    ap.add_argument("--work-dir", type=Path, default=Path(".vla_train"),
+                    help="dataset cache + resume state (safe to delete)")
+    ap.add_argument("--resume", action="store_true", help="continue an interrupted run from --work-dir")
     args = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
     import torch
 
     tok = build_tokenizer()
-    parts = [d for d in (collect("kinematic", args.kinematic, args.workers, args.seed),
-                         collect("pybullet", args.pybullet, args.workers, args.seed + 100_000)) if d is not None]
-    data = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+    args.work_dir.mkdir(parents=True, exist_ok=True)
+    cache = args.work_dir / f"demos_k{args.kinematic}_p{args.pybullet}_s{args.seed}.npz"
+    if args.resume and cache.is_file():
+        data = dict(np.load(cache))
+        log.info("loaded cached demonstrations %s", cache)
+    else:
+        parts = [d for d in (collect("kinematic", args.kinematic, args.workers, args.seed),
+                             collect("pybullet", args.pybullet, args.workers, args.seed + 100_000)) if d is not None]
+        data = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
+        np.savez(cache, **data)
     log.info("dataset: %d samples, vocab %d", len(data["done"]), len(tok))
-    model, val = train(data, len(tok), args.epochs, args.batch, args.lr, args.seed)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     meta = {"trained": time.strftime("%Y-%m-%d %H:%M"), "samples": int(len(data["done"])),
             "teacher_episodes": {"kinematic": args.kinematic, "pybullet": args.pybullet}, "epochs": args.epochs,
-            "objects": list(OBJECTS), "none_slot": NONE_SLOT, **val}
+            "objects": list(OBJECTS), "none_slot": NONE_SLOT}
+
+    def save(model, epoch: int, val: dict) -> None:  # a usable checkpoint after every epoch
+        meta.update(val, epochs_done=epoch)
+        torch.save({"state_dict": model.state_dict(), "model_cfg": model.cfg, "vocab": tok.vocab, "meta": meta},
+                   args.out)
+
+    resume = args.work_dir / "resume.pt"
+    if not args.resume:
+        resume.unlink(missing_ok=True)
+    model, val = train(data, len(tok), args.epochs, args.batch, args.lr, args.seed, on_epoch=save,
+                       resume_path=resume)
+    meta.update(val)
     ckpt = {"state_dict": model.state_dict(), "model_cfg": model.cfg, "vocab": tok.vocab, "meta": meta}
     torch.save(ckpt, args.out)
 
