@@ -29,6 +29,8 @@ pip install -r requirements.txt   # includes MuJoCo: the Yaskawa GP7 CAD robot w
 python run.py
 ```
 
+After every `git pull`, run `pip install -r requirements.txt` again, because updates can add packages. If MuJoCo is missing, `run.py` offers to install it.
+
 On Windows the GP7 runs on **MuJoCo** (prebuilt wheels). PyBullet is optional there and needs [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) before `pip install pybullet`. Choose the engine with `python run.py --sim mujoco` or `--sim pybullet`.
 
 **PyCharm:** open the folder, set the interpreter to `.venv`, right-click `run.py` → *Run 'run'*.
@@ -46,7 +48,7 @@ Try "Put the red cube on the blue cylinder", "Pick up the green ball", "Place th
 | `xcb-cursor0 or libxcb-cursor0 is needed` | missing Ubuntu library for Qt ≥ 6.5 | `sudo apt install libxcb-cursor0 libxkbcommon-x11-0 libegl1` |
 | `dataclass() got an unexpected keyword argument 'slots'` | Python older than 3.10 | use a Python 3.10+ interpreter |
 | `Microsoft Visual C++ 14.0 or greater is required` / `Failed building wheel for pybullet` (Windows) | no prebuilt pybullet for Windows on PyPI | not needed any more: `requirements.txt` installs MuJoCo for the GP7 instead |
-| The robot is a flat 2D drawing, not the Yaskawa CAD model | no physics engine installed | `pip install mujoco` |
+| The robot is a flat 2D drawing, not the Yaskawa CAD model (`MuJoCo is not installed`) | MuJoCo missing from this interpreter, e.g. after a `git pull` without re-running `pip install -r requirements.txt` | answer **Y** when `run.py` offers to install it, or `python -m pip install mujoco` |
 | Episodes fail with `ConnectTimeout … 127.0.0.1:8000` | Policy set to `openvla` / `openpi`, which need a separate GPU model server | choose the **learned** policy (runs locally), or start the server first |
 
 ## The learned policy
