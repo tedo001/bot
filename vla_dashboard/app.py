@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 
 from PyQt6.QtWidgets import QApplication
@@ -29,9 +30,22 @@ def parse_args(argv: list[str] | None = None) -> AppConfig:
     return AppConfig(**overrides)
 
 
+def _use_pyqt_platform_plugins() -> None:
+    """The GUI build of OpenCV (``opencv-python``, often pulled in by PaddleOCR / RF-DETR) points
+    QT_QPA_PLATFORM_PLUGIN_PATH at its own Qt plugins when imported, and PyQt6 then dies with
+    'Could not load the Qt platform plugin "xcb"'. Drop that override so PyQt6 uses its own."""
+    path = os.environ.get("QT_QPA_PLATFORM_PLUGIN_PATH", "")
+    if "cv2" in path:
+        os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
+        logging.getLogger(__name__).warning(
+            "ignored OpenCV's Qt plugin path (%s); for a clean setup use opencv-python-headless:\n"
+            "  pip uninstall -y opencv-python && pip install opencv-python-headless", path)
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     cfg = parse_args(argv)
+    _use_pyqt_platform_plugins()
     app = QApplication(sys.argv)
     app.setApplicationName("VLA Robot Dashboard")
     app.setStyle("Fusion")

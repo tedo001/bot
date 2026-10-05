@@ -23,7 +23,17 @@ python run.py --sim kinematic       # lightweight numpy/OpenCV simulator
 **PyCharm:** open the folder, set the interpreter to `.venv`, right-click `run.py` → *Run 'run'*.
 Try "Put the red cube on the blue cylinder", "Pick up the green ball", "Place the sphere next to the cube". **Ctrl+Enter** runs, **Esc** toggles E-STOP.
 
-If Qt reports a missing `xcb`/`libEGL` plugin on a fresh Ubuntu: `sudo apt install libegl1 libxkbcommon-x11-0 libxcb-cursor0`.
+### Troubleshooting
+
+`run.py` checks the setup before starting and prints the fix. The common errors:
+
+| Error | Cause | Fix |
+|---|---|---|
+| `No module named 'vla_dashboard'` | `run.py` opened without the project folder | `git clone -b sim https://github.com/tedo001/bot.git`, open the `bot` folder in PyCharm |
+| `No module named 'PyQt6'` (or `pydantic_settings`, `cv2`, …) | PyCharm uses a different interpreter than the one you installed into | In PyCharm's Terminal: `python -m pip install -r requirements.txt`, or pick the `.venv` interpreter |
+| `Could not load the Qt platform plugin "xcb" … cv2/qt/plugins` | `opencv-python` (GUI build) overrides Qt's plugin path | Handled automatically now; clean fix: `pip uninstall -y opencv-python && pip install opencv-python-headless` |
+| `xcb-cursor0 or libxcb-cursor0 is needed` | missing Ubuntu library for Qt ≥ 6.5 | `sudo apt install libxcb-cursor0 libxkbcommon-x11-0 libegl1` |
+| `dataclass() got an unexpected keyword argument 'slots'` | Python older than 3.10 | use a Python 3.10+ interpreter |
 
 ## The learned policy
 
