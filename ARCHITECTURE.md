@@ -87,7 +87,10 @@ robot state ─► [PROPRIO] (xyz + Fourier features, gripper opening, holding)
   * It stops after two consecutive done predictions, and reports a failure if it finds no matching object.
 * **Explainability:** the GUI marks the model's chosen source and destination objects and shows its done probability.
 
-Closed-loop results are written to `assets/models/vla_act.json` by `python -m vla_dashboard.learning.train`.
+* **Robustness to wording:** word dropout during training (verbs and filler words randomly blanked) lets unfamiliar verbs like "grasp" work; v1 without it refused them.
+* **Subgoal head:** an auxiliary output predicts where the gripper should be heading. It is used only as a training signal, and it sharpened placement in physics. GP7 stacking rose from 25% (v1) to 88% (v2), together with re-planning every tick and twice the PyBullet data.
+
+Closed-loop results are written to `assets/models/vla_act.json` by `python -m vla_dashboard.learning.train` (see the README table).
 
 ## 3. Why it is fast
 

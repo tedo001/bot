@@ -198,3 +198,25 @@ def test_pybullet_survives_render_process_crash():
         assert pkt.rgb.shape == (480, 640, 3) and pkt.instance_ids.max() == 3  # in-process fallback frames
     finally:
         sim.close()
+
+
+def test_grounding_label_left_behind_does_not_rename_neighbour():
+    """A printed label whose object was carried away must not rename the nearest other object,
+    and two detections that end up with the same name must both be kept."""
+    from vla_dashboard.perception.pipeline import PerceptionPipeline
+    from vla_dashboard.schemas import BBox, Detection, OCRLabel
+    from vla_dashboard.sim.simulator import PinholeCamera
+
+    pipe = PerceptionPipeline(AppConfig(perception_mode="mock"), PinholeCamera(640, 480))
+    dets = [Detection(label="cube", score=0.9, box=BBox(x1=190, y1=325, x2=218, y2=359)),
+            Detection(label="cylinder", score=0.9, box=BBox(x1=400, y1=150, x2=424, y2=187)),  # lifted, far away
+            Detection(label="sports ball", score=0.9, box=BBox(x1=343, y1=326, x2=366, y2=349))]
+    ocr = [OCRLabel(text="CUBE", score=0.99, box=BBox(x1=179, y1=366, x2=226, y2=387)),
+           OCRLabel(text="CYLINDER", score=0.99, box=BBox(x1=230, y1=366, x2=307, y2=387)),  # its object left
+           OCRLabel(text="SPHERE", score=0.99, box=BBox(x1=331, y1=366, x2=395, y2=387))]
+    idx = pipe._build_index(dets, ocr)
+    names = sorted(o.name for o in idx.objects.values())
+    assert names == ["cube", "cylinder", "sphere"]  # cube not renamed; COCO "sports ball" named by its label
+    dup = pipe._build_index([dets[0], Detection(label="cube", score=0.8, box=BBox(x1=500, y1=300, x2=520, y2=320))],
+                            [])
+    assert len(dup.objects) == 2

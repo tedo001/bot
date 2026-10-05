@@ -145,34 +145,53 @@ class PerceptionPipeline:
                                 pkt.robot_skeleton_2d)
 
     def _build_index(self, dets: list[Detection], ocr: list[OCRLabel]) -> SceneIndex:
-        # Ground: each OCR label names the detection sitting just above it (labels are
-        # printed in front of objects, i.e. lower in the image).
-        names: dict[int, str] = {}
-        for lab in ocr:
-            lu, lv = lab.box.center
-            best, best_d = None, 90.0
-            for i, d in enumerate(dets):
-                du, dv = d.box.center
-                if dv > lv:
-                    continue
-                dist = float(np.hypot(du - lu, dv - lv))
-                if dist < best_d:
-                    best, best_d = i, dist
-            if best is not None:
-                names[best] = lab.text.lower()
-
+        names = self._ground(dets, ocr)
         idx = SceneIndex()
         for i, d in enumerate(dets):
             name = names.get(i, d.label.lower())
+            key, k = name, 2
+            while key in idx.objects:  # never drop an object because two share a name
+                key, k = f"{name}#{k}", k + 1
             u, v = d.box.center
             pos = self.camera.deproject_to_plane(u, v, OBJECT_CENTER_Z)
-            prev = idx.objects.get(name)
-            if prev is None or d.score > prev.score:
-                idx.objects[name] = SceneObject(name=name, box=d.box, position=pos, score=d.score)
+            idx.objects[key] = SceneObject(name=name, box=d.box, position=pos, score=d.score)
         for canon, words in SYNONYMS.items():
             if canon in idx.objects:
                 for w in words:
                     idx.alias.setdefault(w, canon)
-        for name in idx.objects:
-            idx.alias[name] = name
+        for key, obj in idx.objects.items():
+            idx.alias.setdefault(obj.name, key)
         return idx
+
+    @staticmethod
+    def _ground(dets: list[Detection], ocr: list[OCRLabel], max_px: float = 90.0) -> dict[int, str]:
+        """Name detections from the printed workspace labels, one label per detection.
+
+        * A detection whose own class already matches a label's text keeps it, and that label
+          is used up (so a label left behind by a moved object cannot rename a neighbour).
+        * Remaining labels go to the nearest unclaimed detection just above them (labels are
+          printed in front of objects), closest pairs first.
+        """
+        texts = [lab.text.lower() for lab in ocr]
+        names: dict[int, str] = {}
+        free_labels = set(range(len(ocr)))
+        for i, d in enumerate(dets):
+            if d.label.lower() in texts:
+                names[i] = d.label.lower()
+                free_labels.discard(texts.index(d.label.lower()))
+        pairs = []
+        for j in free_labels:
+            lu, lv = ocr[j].box.center
+            for i, d in enumerate(dets):
+                if i in names:
+                    continue
+                du, dv = d.box.center
+                dist = float(np.hypot(du - lu, dv - lv))
+                if dv <= lv and dist < max_px:
+                    pairs.append((dist, i, j))
+        used_labels: set[int] = set()
+        for _, i, j in sorted(pairs):
+            if i not in names and j not in used_labels:
+                names[i] = texts[j]
+                used_labels.add(j)
+        return names

@@ -1,9 +1,9 @@
 {
-  "trained": "2026-10-05 08:32",
-  "samples": 309833,
+  "trained": "2026-10-05 08:53",
+  "samples": 378875,
   "teacher_episodes": {
     "kinematic": 5000,
-    "pybullet": 1500
+    "pybullet": 3000
   },
   "epochs": 16,
   "objects": [
@@ -12,64 +12,66 @@
     "sphere"
   ],
   "none_slot": 6,
-  "val_action_l1": 0.015460488386452198,
-  "val_done_bce": 0.005414547864347696,
-  "val_pointer_ce": 6.640381798206363e-06,
+  "val_action_l1": 0.02281651832163334,
+  "val_done_bce": 0.00778817106038332,
+  "val_pointer_ce": 6.405765361705562e-06,
   "val_grounding_acc": 1.0,
   "epochs_done": 16,
   "closed_loop": {
     "kinematic/train_phrasing": {
       "success": 0.9833333333333333,
       "n": 60,
-      "next_to": 0.947,
+      "next_to": 0.938,
       "pick": 1.0,
       "stack": 1.0,
-      "home": 1.0,
-      "unknown": 1.0
+      "unknown": 1.0,
+      "home": 1.0
     },
     "kinematic/heldout_phrasing": {
-      "success": 0.8833333333333333,
+      "success": 0.9833333333333333,
       "n": 60,
-      "stack": 0.905,
-      "next_to": 1.0,
-      "home": 1.0,
-      "pick": 0.545
+      "next_to": 0.941,
+      "stack": 1.0,
+      "pick": 1.0,
+      "home": 1.0
     },
     "kinematic/no_labels": {
       "success": 0.9833333333333333,
       "n": 60,
-      "stack": 1.0,
       "pick": 1.0,
-      "next_to": 0.95,
-      "home": 1.0,
-      "unknown": 1.0
+      "next_to": 0.944,
+      "stack": 1.0,
+      "unknown": 1.0,
+      "home": 1.0
     },
     "kinematic/unknown_object_refusal": {
       "success": 1.0,
       "n": 10
     },
     "pybullet/train_phrasing": {
-      "success": 0.7,
-      "n": 30,
-      "stack": 0.25,
-      "next_to": 0.727,
+      "success": 0.9666666666666667,
+      "n": 60,
       "pick": 1.0,
-      "home": 1.0
+      "next_to": 1.0,
+      "stack": 0.875,
+      "home": 1.0,
+      "unknown": 1.0
     },
     "pybullet/heldout_phrasing": {
-      "success": 0.8333333333333334,
-      "n": 30,
-      "pick": 0.727,
+      "success": 0.9333333333333333,
+      "n": 60,
+      "stack": 0.765,
       "next_to": 1.0,
-      "stack": 0.8,
+      "pick": 1.0,
       "home": 1.0
     },
     "pybullet/no_labels": {
       "success": 0.8666666666666667,
-      "n": 30,
+      "n": 60,
       "pick": 1.0,
-      "next_to": 1.0,
-      "stack": 0.556
+      "stack": 0.611,
+      "unknown": 1.0,
+      "next_to": 0.955
     },
     "pybullet/unknown_object_refusal": {
       "success": 1.0,
@@ -79,11 +81,17 @@
   "full_stack": {
     "kinematic": {
       "success": 1.0,
-      "n": 12
+      "n": 24
     },
     "pybullet": {
-      "success": 1.0,
-      "n": 6
-    }
+      "success": 0.917,
+      "n": 12
+    },
+    "note": "renderer -> perception (mock detectors) -> learned policy -> controller; 12 phrasings incl. held-out ones, default + random layouts; measured after the one-to-one label-grounding fix"
+  },
+  "version": 2,
+  "previous_version_full_stack": {
+    "kinematic": "21/24",
+    "pybullet": "9/12"
   }
 }

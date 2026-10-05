@@ -43,6 +43,18 @@ python -m vla_dashboard.learning.train --kinematic 1500 --pybullet 0 --epochs 12
    * which object the instruction refers to (source and destination)
 3. **Closed-loop evaluation.** The model drives the robot on new layouts, in both simulators, through the real perception pipeline.
 
+Results of the shipped model (v2), closed loop on new random layouts:
+
+| | Simple sim | Yaskawa GP7 (PyBullet physics) |
+|---|---|---|
+| Training-style phrasings | 98.3% | 96.7% |
+| Held-out phrasings (never seen) | 98.3% | 93.3% |
+| No object labels (colour only) | 98.3% | 86.7% |
+| Refuses unknown objects ("the banana") | 100% | 100% |
+| Full app path (renderer → perception → model) | 24/24 | 11/12 |
+
+60 episodes per row (10 for refusal). The weakest case is stacking in physics without labels (61%); the one full-path failure is balancing the cylinder on the ball.
+
 The checkpoint is `vla_dashboard/assets/models/vla_act.pt`, with its metrics in `vla_act.json`. In the dashboard the camera view marks the object the model chose (**SRC**) and its destination (**DST**), and the telemetry shows its done probability.
 
 ## Real models (optional)
