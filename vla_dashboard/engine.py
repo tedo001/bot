@@ -32,21 +32,29 @@ log = logging.getLogger(__name__)
 
 
 def make_sim(cfg: AppConfig):
-    """Pick the simulator backend. Both expose camera / reset / apply_delta / render / state."""
-    if cfg.sim_backend in ("auto", "pybullet"):
+    """Pick the simulator backend. All expose camera / reset / apply_delta / render / state."""
+    order = {"auto": ("pybullet", "mujoco"), "pybullet": ("pybullet",), "mujoco": ("mujoco",)}.get(cfg.sim_backend, ())
+    for kind in order:
         try:
-            from .sim.pybullet_sim import PyBulletSim
+            if kind == "pybullet":
+                from .sim.pybullet_sim import PyBulletSim
 
-            sim = PyBulletSim(cfg.frame_width, cfg.frame_height, model=cfg.robot_model, detail=cfg.sim_mesh_detail,
-                              control_hz=cfg.control_hz, async_render=cfg.sim_async_render, use_egl=cfg.sim_use_egl)
-            log.info("simulator: PyBullet + Yaskawa Motoman %s (%s meshes, %s render)", cfg.robot_model.upper(),
-                     cfg.sim_mesh_detail, "async" if cfg.sim_async_render else "sync")
+                sim = PyBulletSim(cfg.frame_width, cfg.frame_height, model=cfg.robot_model,
+                                  detail=cfg.sim_mesh_detail, control_hz=cfg.control_hz,
+                                  async_render=cfg.sim_async_render, use_egl=cfg.sim_use_egl)
+            else:
+                from .sim.mujoco_sim import MuJoCoSim
+
+                sim = MuJoCoSim(cfg.frame_width, cfg.frame_height, model=cfg.robot_model, detail=cfg.sim_mesh_detail,
+                                control_hz=cfg.control_hz, async_render=cfg.sim_async_render)
+            log.info("simulator: %s + Yaskawa Motoman %s (%s meshes)", "PyBullet" if kind == "pybullet" else "MuJoCo",
+                     cfg.robot_model.upper(), cfg.sim_mesh_detail)
             return sim
-        except Exception as exc:  # noqa: BLE001 - missing pybullet/meshes -> fall back
-            if cfg.sim_backend == "pybullet":
+        except Exception as exc:  # noqa: BLE001 - missing package/meshes -> try the next backend
+            if cfg.sim_backend != "auto":
                 raise
-            log.warning("PyBullet simulator unavailable (%s); using the kinematic simulator", exc)
-    log.info("simulator: kinematic (numpy/OpenCV)")
+            log.warning("%s simulator unavailable (%s)", kind, exc)
+    log.warning("simulator: kinematic stand-in (no CAD robot). For the Yaskawa GP7: pip install mujoco")
     return TabletopSim(cfg.frame_width, cfg.frame_height)
 
 

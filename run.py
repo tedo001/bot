@@ -15,8 +15,7 @@ ROOT = Path(__file__).resolve().parent
 REPO = "git clone -b sim https://github.com/tedo001/bot.git"
 REQUIRED = {"PyQt6": "PyQt6", "pydantic": "pydantic", "pydantic_settings": "pydantic-settings", "numpy": "numpy",
             "cv2": "opencv-python-headless"}
-OPTIONAL = {"pybullet": "the Yaskawa GP7 simulator (falls back to the simple simulator)",
-            "torch": "the learned policy (falls back to the rule-based planner)"}
+OPTIONAL = {"torch": "the learned policy (falls back to the rule-based planner)"}
 
 
 def _fail(msg: str) -> None:
@@ -44,17 +43,11 @@ def preflight() -> None:
               "  Fix (run in PyCharm's Terminal):\n"
               f"    \"{sys.executable}\" -m pip install -r \"{ROOT / 'requirements.txt'}\"")
     for mod, what in OPTIONAL.items():
-        if importlib.util.find_spec(mod) is not None:
-            continue
-        if mod == "pybullet" and sys.platform == "win32":
-            _warn("'pybullet' is not installed, so the Yaskawa GP7 simulator is off (using the simple simulator).\n"
-                  "  PyPI has no Windows build of pybullet, so it must be compiled once:\n"
-                  "    1. install 'Microsoft C++ Build Tools' (workload: Desktop development with C++)\n"
-                  "       https://visualstudio.microsoft.com/visual-cpp-build-tools/\n"
-                  "    2. in PyCharm's Terminal (venv active):  pip install pybullet\n"
-                  "  or, with conda:  conda install -c conda-forge pybullet")
-        else:
+        if importlib.util.find_spec(mod) is None:
             _warn(f"'{mod}' is not installed: {what}. Install with: pip install -r requirements.txt")
+    if not any(importlib.util.find_spec(m) for m in ("mujoco", "pybullet")):
+        _warn("no physics engine installed, so the Yaskawa GP7 CAD robot is off (using the simple 2D simulator).\n"
+              "  Fix:  pip install mujoco     (prebuilt for Windows, Linux and macOS)")
 
     if sys.platform.startswith("linux") and os.environ.get("QT_QPA_PLATFORM", "") not in ("offscreen", "minimal"):
         if ctypes.util.find_library("xcb-cursor") is None and os.environ.get("XDG_SESSION_TYPE") != "wayland":

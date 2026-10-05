@@ -18,7 +18,7 @@ def parse_args(argv: list[str] | None = None) -> AppConfig:
     ap.add_argument("--backend", choices=["learned", "mock", "openvla", "openpi"], help="VLA policy backend")
     ap.add_argument("--perception", choices=["auto", "mock", "real"], help="perception model mode")
     ap.add_argument("--hz", type=float, help="control loop rate")
-    ap.add_argument("--sim", choices=["auto", "pybullet", "kinematic"], help="simulator backend")
+    ap.add_argument("--sim", choices=["auto", "pybullet", "mujoco", "kinematic"], help="simulator backend")
     ap.add_argument("--robot", choices=["gp7", "gp8"], help="Yaskawa Motoman model (pybullet sim)")
     ap.add_argument("--egl", action="store_true", help="GPU rendering via EGL + full CAD meshes")
     args, _ = ap.parse_known_args(argv)

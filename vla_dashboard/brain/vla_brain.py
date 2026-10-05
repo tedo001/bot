@@ -108,6 +108,7 @@ class VLABrain:
         self.scheduler = self._make_scheduler()
         self._lock = threading.Lock()
         self._instruction: InstructionPayload | None = None
+        self.fallback_reason: str | None = None
 
     def _make_scheduler(self) -> ChunkScheduler:
         # Local policies (learned model ~1 ms, scripted) re-plan synchronously from the newest
@@ -126,6 +127,7 @@ class VLABrain:
                       "Install torch and/or train: python -m vla_dashboard.learning.train", exc)
             from .policies import OKRobotScriptedPolicy
 
+            self.fallback_reason = str(exc)
             self.scheduler.shutdown()
             self.policy = OKRobotScriptedPolicy(self.cfg)
             self.scheduler = self._make_scheduler()
@@ -150,6 +152,23 @@ class VLABrain:
     @property
     def policy_backend_name(self) -> str:
         return self.cfg.brain_backend
+
+    def describe(self) -> tuple[str, bool]:
+        """(human-readable description of what drives the robot, is_a_trained_model)."""
+        src = self.policy.source
+        if src == "learned":
+            from pathlib import Path
+
+            meta = getattr(self.policy, "meta", {}) or {}
+            score = (meta.get("closed_loop") or {}).get("kinematic/train_phrasing", {}).get("success")
+            extra = f", {score * 100:.0f}% in eval" if score is not None else ""
+            return f"trained model {Path(self.policy.path).name}{extra}", True
+        if self.fallback_reason:
+            return f"RULE-BASED FALLBACK - model unavailable: {self.fallback_reason}", False
+        if src == "mock":
+            return "rule-based teacher (not a learned model)", False
+        return {"openvla": f"OpenVLA server {self.cfg.openvla_url}",
+                "openpi": f"openpi server {self.cfg.openpi_host}:{self.cfg.openpi_port}"}.get(src, src), True
 
     @property
     def done(self) -> bool:

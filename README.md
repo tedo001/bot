@@ -3,7 +3,7 @@
 PyQt6 control dashboard and simulator for a Vision-Language-Action robot pipeline (Physical AI Robotics Challenge).
 
 * Natural-language instruction box, **Run Simulation** / Stop / Reset / E-STOP, live camera stream with overlays, console log, telemetry.
-* Simulator: **Yaskawa Motoman GP7** (or GP8) built from Yaskawa's CAD meshes (ROS-Industrial, BSD-3-Clause), with PyBullet physics, IK and real grasping and stacking. Rendering runs in its own process, so the 20 Hz control loop never waits on it. A dependency-free kinematic simulator is the fallback.
+* Simulator: **Yaskawa Motoman GP7** (or GP8) built from Yaskawa's CAD meshes (ROS-Industrial, BSD-3-Clause), on **MuJoCo** or **PyBullet**, with physics, IK and real grasping and stacking. Rendering runs on its own thread or process, so the 20 Hz control loop never waits on it. A dependency-free 2D simulator is the last-resort fallback.
 * Perception: **PaddleOCR** (workspace labels) · **RT-DETR** via HF transformers (supportive detection + safety layer) · **RF-DETR** (instance segmentation → mask overlay + skeleton view). **No ultralytics** (AGPL).
 * Brain: a **learned policy** drives the robot by default. It's a language-conditioned transformer trained by imitation learning (ACT-style action chunks), and it maps instruction + perceived objects + robot state to motor commands, with no hand-written rules at run time. Other backends: **OpenVLA** REST client, **openpi π₀** websocket client, and the rule-based **OK-Robot** planner (`mock`), which is the teacher that generated the training demonstrations.
 * `RobotController` with E-STOP, safety hold, watchdog and rate limits. Pydantic v2 schemas at every boundary.
@@ -25,16 +25,11 @@ python run.py --sim kinematic       # lightweight numpy/OpenCV simulator
 ```powershell
 py -3.12 -m venv .venv            # any Python 3.10–3.13
 .venv\Scripts\Activate.ps1
-pip install -r requirements.txt   # everything except pybullet (PyPI has no Windows build of it)
-python run.py                     # works now, with the simple simulator
+pip install -r requirements.txt   # includes MuJoCo: the Yaskawa GP7 CAD robot works out of the box
+python run.py
 ```
 
-To get the **Yaskawa GP7 simulator** on Windows, `pybullet` has to be compiled once:
-
-1. Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and tick the **Desktop development with C++** workload. Restart PyCharm afterwards.
-2. In PyCharm's Terminal with the venv active: `pip install pybullet` (compiles for a few minutes).
-
-Alternatively, with conda: `conda install -c conda-forge pybullet`. Linux and WSL2 get a prebuilt pybullet from pip, with no compiler needed.
+On Windows the GP7 runs on **MuJoCo** (prebuilt wheels). PyBullet is optional there and needs [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) before `pip install pybullet`. Choose the engine with `python run.py --sim mujoco` or `--sim pybullet`.
 
 **PyCharm:** open the folder, set the interpreter to `.venv`, right-click `run.py` → *Run 'run'*.
 Try "Put the red cube on the blue cylinder", "Pick up the green ball", "Place the sphere next to the cube". **Ctrl+Enter** runs, **Esc** toggles E-STOP.
@@ -50,13 +45,25 @@ Try "Put the red cube on the blue cylinder", "Pick up the green ball", "Place th
 | `Could not load the Qt platform plugin "xcb" … cv2/qt/plugins` | `opencv-python` (GUI build) overrides Qt's plugin path | Handled automatically now; clean fix: `pip uninstall -y opencv-python && pip install opencv-python-headless` |
 | `xcb-cursor0 or libxcb-cursor0 is needed` | missing Ubuntu library for Qt ≥ 6.5 | `sudo apt install libxcb-cursor0 libxkbcommon-x11-0 libegl1` |
 | `dataclass() got an unexpected keyword argument 'slots'` | Python older than 3.10 | use a Python 3.10+ interpreter |
-| `Microsoft Visual C++ 14.0 or greater is required` / `Failed building wheel for pybullet` (Windows) | no prebuilt pybullet for Windows on PyPI | see **Windows** above: C++ Build Tools then `pip install pybullet`, or conda |
+| `Microsoft Visual C++ 14.0 or greater is required` / `Failed building wheel for pybullet` (Windows) | no prebuilt pybullet for Windows on PyPI | not needed any more: `requirements.txt` installs MuJoCo for the GP7 instead |
+| The robot is a flat 2D drawing, not the Yaskawa CAD model | no physics engine installed | `pip install mujoco` |
+| Episodes fail with `ConnectTimeout … 127.0.0.1:8000` | Policy set to `openvla` / `openpi`, which need a separate GPU model server | choose the **learned** policy (runs locally), or start the server first |
 
 ## The learned policy
 
+**Train from the app:** in the **Train the policy** panel pick *Quick* (a few minutes) or *Full* (about 40 minutes on a 4-core CPU) and press **Train new model**.
+* Training runs in a separate process, so the robot keeps moving.
+* The progress bar shows each stage: teacher demonstrations, training epochs, evaluation.
+* When training finishes, the new model (saved in `models/`) is switched in automatically.
+* The **Model** box lets you switch between the shipped model and anything you've trained.
+* The **Driving** line always shows what controls the arm: green for a trained model, red if it ever falls back to rules.
+
+From a terminal:
+
 ```bash
-python -m vla_dashboard.learning.train        # ~35 min on a 4-core CPU: demos -> training -> evaluation
-python -m vla_dashboard.learning.train --kinematic 1500 --pybullet 0 --epochs 12   # ~4 min quick model
+python -m vla_dashboard.learning.train                    # full preset: demos -> training -> evaluation
+python -m vla_dashboard.learning.train --preset quick     # usable model in a few minutes
+python -m vla_dashboard.learning.train --physics-sims mujoco --out models/my_policy.pt
 ```
 
 1. **Teacher demonstrations.** The rule-based planner is told the task directly and runs thousands of episodes:
@@ -109,7 +116,9 @@ vla_dashboard/
   frame_bus.py              LatestSlot (latest-wins mailbox), FramePacket
   engine.py                 Qt-free core: sim → perception → brain → controller
   workers.py                ControlWorker / PerceptionWorker (QThread), LoaderTask (QRunnable)
-  sim/pybullet_sim.py       Yaskawa GP7/GP8 sim: physics + IK in-process, rendering in a spawned process
+  sim/mujoco_sim.py         Yaskawa GP7/GP8 sim on MuJoCo (Windows-friendly): physics + IK, render thread
+  sim/pybullet_sim.py       Yaskawa GP7/GP8 sim on PyBullet: physics + IK in-process, rendering in a spawned process
+  sim/scene.py              table, objects, labels, camera shared by both physics simulators
   sim/motoman_urdf.py       GP7/GP8 URDF (vendor kinematics + meshes) + parallel gripper
   sim/simulator.py          kinematic tabletop sim + renderer (≈0.8 ms/frame), fallback
   assets/motoman/           Yaskawa CAD meshes (BSD-3-Clause, see README there)

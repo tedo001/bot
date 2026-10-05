@@ -210,6 +210,17 @@ class OKRobotScriptedPolicy:
 # ======================================================================================
 # OpenVLA (REST) - openvla/vla-scripts/deploy.py
 # ======================================================================================
+def _require_server(host: str, port: int, what: str, how: str) -> None:
+    """Fail fast with a clear message instead of timing out on every control tick."""
+    import socket
+
+    try:
+        socket.create_connection((host, port), timeout=2.0).close()
+    except OSError as exc:
+        raise ConnectionError(f"{what} server not reachable at {host}:{port} ({exc.__class__.__name__}). "
+                              f"Start it first ({how}) or choose the 'learned' policy, which runs locally.") from exc
+
+
 class OpenVLARestPolicy:
     """OpenVLA predicts one 7-DoF action per call: EE delta + absolute gripper in [0, 1].
     Note: OpenVLA's action frame is the training robot's (e.g. WidowX for BridgeData);
@@ -225,6 +236,11 @@ class OpenVLARestPolicy:
         import json_numpy  # type: ignore  # the server decodes arrays with json_numpy
         import requests
 
+        from urllib.parse import urlparse
+
+        u = urlparse(self.url)
+        _require_server(u.hostname or "127.0.0.1", u.port or 80, "OpenVLA",
+                        "python openvla/vla-scripts/deploy.py on a GPU machine")
         json_numpy.patch()
         self._session = requests.Session()  # keep-alive: no TCP handshake per step
         log.info("OpenVLA client -> %s", self.url)
@@ -264,6 +280,7 @@ class OpenPIWebsocketPolicy:
     def load(self) -> None:
         from openpi_client import websocket_client_policy  # type: ignore
 
+        _require_server(self.host, self.port, "openpi", "uv run scripts/serve_policy.py in the openpi repo")
         self._client = websocket_client_policy.WebsocketClientPolicy(host=self.host, port=self.port)
         log.info("openpi server metadata: %s", self._client.get_server_metadata())
 

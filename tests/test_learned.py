@@ -15,12 +15,9 @@ from vla_dashboard.schemas import InstructionPayload  # noqa: E402
 
 pytestmark = pytest.mark.skipif(not DEFAULT_CHECKPOINT.is_file(), reason="no trained checkpoint")
 
-try:
-    import pybullet  # noqa: F401
+import importlib.util  # noqa: E402
 
-    SIMS = ["kinematic", "pybullet"]
-except ImportError:
-    SIMS = ["kinematic"]
+SIMS = ["kinematic"] + [k for k in ("pybullet", "mujoco") if importlib.util.find_spec(k) is not None]
 
 SCENE = [("cube", (220, 30, 30), (-0.22, 0.46, 0.025)), ("cylinder", (35, 45, 215), (-0.05, 0.46, 0.025)),
          ("sphere", (40, 200, 70), (0.12, 0.46, 0.025))]
@@ -55,6 +52,7 @@ def test_learned_policy_stacks_through_full_stack(sim):
     e = _engine(sim)
     try:
         assert e.brain.policy.source == "learned"
+        assert e.brain.describe()[1]  # the GUI shows "trained model …" in green
         objs, st = _run(e, "put the red cube on the blue cylinder")
         assert np.linalg.norm(objs["cube"][:2] - objs["cylinder"][:2]) < 0.025 and objs["cube"][2] > 0.07, objs
         assert st["holding"] is None

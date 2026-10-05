@@ -12,12 +12,9 @@ from vla_dashboard.perception.skeleton import morphological_skeleton
 from vla_dashboard.schemas import InstructionPayload
 
 
-try:
-    import pybullet  # noqa: F401
+import importlib.util
 
-    SIMS = ["kinematic", "pybullet"]
-except ImportError:
-    SIMS = ["kinematic"]
+SIMS = ["kinematic"] + [k for k in ("pybullet", "mujoco") if importlib.util.find_spec(k) is not None]
 
 
 def _engine(sim="kinematic"):
@@ -148,10 +145,10 @@ def test_skeleton_is_thin():
     assert 0 < (sk > 0).sum() < m.sum() * 0.3
 
 
-@pytest.mark.skipif("pybullet" not in SIMS, reason="pybullet not installed")
-def test_pybullet_camera_matches_renderer():
-    """The perception camera model must agree with PyBullet's projection to the pixel."""
-    e = _engine("pybullet")
+@pytest.mark.parametrize("sim", [k for k in SIMS if k != "kinematic"])
+def test_physics_camera_matches_renderer(sim):
+    """The perception camera model must agree with the physics renderer's projection to the pixel."""
+    e = _engine(sim)
     pkt = e.sim.render()
     for iid, name in pkt.gt_objects.items():
         ys, xs = np.nonzero(pkt.instance_ids == iid)
@@ -220,3 +217,65 @@ def test_grounding_label_left_behind_does_not_rename_neighbour():
     dup = pipe._build_index([dets[0], Detection(label="cube", score=0.8, box=BBox(x1=500, y1=300, x2=520, y2=320))],
                             [])
     assert len(dup.objects) == 2
+
+
+@pytest.mark.skipif("mujoco" not in SIMS, reason="mujoco not installed")
+def test_mujoco_async_render_never_blocks_control():
+    from vla_dashboard.sim.mujoco_sim import MuJoCoSim
+
+    sim = MuJoCoSim(async_render=True)
+    try:
+        first = sim.render()  # waits for the first real frame only
+        assert first.rgb.shape == (480, 640, 3) and first.instance_ids.max() == 3
+        t = time.perf_counter()
+        for _ in range(40):
+            sim.apply_delta(np.array([0.002, 0, 0, 0, 0, 0, 0]))
+            sim.render()
+        assert (time.perf_counter() - t) / 40 < 0.03  # physics + IK; rendering happens on its own thread
+        deadline = time.time() + 5
+        while sim.render().frame_id == first.frame_id and time.time() < deadline:
+            time.sleep(0.01)
+        assert sim.render().frame_id > first.frame_id
+    finally:
+        sim.close()
+
+
+@pytest.mark.skipif("mujoco" not in SIMS, reason="mujoco not installed")
+def test_auto_sim_falls_back_to_mujoco_without_pybullet(monkeypatch):
+    """Windows case: no pybullet wheel -> the GP7 still comes up, on MuJoCo."""
+    import builtins
+
+    from vla_dashboard.engine import make_sim
+    from vla_dashboard.sim.mujoco_sim import MuJoCoSim
+
+    real_import = builtins.__import__
+
+    def no_pybullet(name, *a, **k):
+        if name == "pybullet" or name.endswith("pybullet_sim"):
+            raise ImportError("No module named 'pybullet'")
+        return real_import(name, *a, **k)
+
+    monkeypatch.setattr(builtins, "__import__", no_pybullet)
+    sim = make_sim(AppConfig(sim_backend="auto", sim_async_render=False))
+    try:
+        assert isinstance(sim, MuJoCoSim)
+    finally:
+        sim.close()
+
+
+def test_unreachable_model_server_fails_fast():
+    from vla_dashboard.brain.policies import _require_server
+
+    t = time.perf_counter()
+    with pytest.raises(ConnectionError, match="choose the 'learned' policy"):
+        _require_server("127.0.0.1", 9, "OpenVLA", "deploy.py")  # port 9: nothing listens
+    assert time.perf_counter() - t < 3.0
+
+
+def test_brain_describes_what_drives_the_robot():
+    from vla_dashboard.brain.vla_brain import VLABrain
+
+    rule = VLABrain(AppConfig(brain_backend="mock"))
+    text, is_model = rule.describe()
+    assert not is_model and "rule-based" in text
+    rule.shutdown()

@@ -1,7 +1,8 @@
 """Train the learned VLA policy by imitation, then evaluate it in closed loop.
 
-    python -m vla_dashboard.learning.train                     # defaults used for the shipped model
-    python -m vla_dashboard.learning.train --kinematic 2000 --pybullet 0 --epochs 20   # quick run
+    python -m vla_dashboard.learning.train                  # full preset (shipped model), ~40 min CPU
+    python -m vla_dashboard.learning.train --preset quick   # usable model in a few minutes
+    python -m vla_dashboard.learning.train --physics-sims mujoco --out models/my_policy.pt
 
 Pipeline: generate demonstrations in parallel (both simulators) → train the transformer
 (L1 on action chunks + done BCE + grounding pointer CE) → closed-loop evaluation on new
@@ -26,6 +27,17 @@ from .data import OBJECTS, build_tokenizer, cameras, generate, sample_layout, sa
 from .policy import DEFAULT_CHECKPOINT, LearnedPolicy
 
 log = logging.getLogger("train")
+
+
+def progress(frac: float, msg: str) -> None:
+    """Machine-readable progress line, parsed by the dashboard's Train panel."""
+    print(f"@@progress {min(max(frac, 0.0), 1.0):.3f} {msg}", flush=True)
+
+
+def available_physics() -> list[str]:
+    import importlib.util
+
+    return [k for k in ("pybullet", "mujoco") if importlib.util.find_spec(k) is not None]
 
 
 # ---------------------------------------------------------------- data
@@ -141,13 +153,12 @@ def closed_loop(policy: LearnedPolicy, sim, camera, spec: TaskSpec, rng, label_d
     return success(spec, start, sim.state()), steps
 
 
-def evaluate(policy: LearnedPolicy, episodes: int, seed: int, include_pybullet: bool) -> dict:
+def evaluate(policy: LearnedPolicy, episodes: int, seed: int, sims: list[str]) -> dict:
     from .data import _get_sim
 
     rng = np.random.default_rng(seed)
     cams = cameras()
     results = {}
-    sims = ["kinematic"] + (["pybullet"] if include_pybullet else [])
     for kind in sims:
         sim = _get_sim(kind)
         n = episodes
@@ -224,44 +235,80 @@ def _spec_from_text(text: str) -> TaskSpec:  # evaluation bookkeeping only (judg
 
 
 # ---------------------------------------------------------------- main
+PRESETS = {
+    # quick: a usable model in a few minutes on a laptop CPU
+    "quick": dict(kinematic=1500, physics=600, epochs=10, eval_episodes=20, full_stack_episodes=4),
+    # full: the settings used for the shipped model (~40 min on a 4-core CPU)
+    "full": dict(kinematic=5000, physics=4500, epochs=16, eval_episodes=60, full_stack_episodes=12),
+}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--kinematic", type=int, default=5000, help="teacher episodes in the kinematic sim")
-    ap.add_argument("--pybullet", type=int, default=3000, help="teacher episodes in the PyBullet GP7 sim")
-    ap.add_argument("--epochs", type=int, default=16)
+    ap.add_argument("--preset", choices=list(PRESETS), default="full", help="defaults for the options below")
+    ap.add_argument("--kinematic", type=int, help="teacher episodes in the simple simulator")
+    ap.add_argument("--physics", type=int, help="teacher episodes in the GP7 physics simulator(s), split evenly")
+    ap.add_argument("--physics-sims", default="auto",
+                    help="auto (every installed one) | pybullet | mujoco | pybullet,mujoco | none")
+    ap.add_argument("--pybullet", type=int, help=argparse.SUPPRESS)  # backwards compatibility
+    ap.add_argument("--epochs", type=int)
     ap.add_argument("--batch", type=int, default=512)
     ap.add_argument("--lr", type=float, default=2e-3)
     ap.add_argument("--workers", type=int, default=max(1, min(8, mp.cpu_count())))
-    ap.add_argument("--eval-episodes", type=int, default=60)
-    ap.add_argument("--full-stack-episodes", type=int, default=12)
+    ap.add_argument("--threads", type=int, default=0, help="torch threads for training (0 = all cores)")
+    ap.add_argument("--eval-episodes", type=int)
+    ap.add_argument("--full-stack-episodes", type=int)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", type=Path, default=DEFAULT_CHECKPOINT)
     ap.add_argument("--work-dir", type=Path, default=Path(".vla_train"),
                     help="dataset cache + resume state (safe to delete)")
     ap.add_argument("--resume", action="store_true", help="continue an interrupted run from --work-dir")
     args = ap.parse_args()
+    for k, v in PRESETS[args.preset].items():
+        if getattr(args, k) is None:
+            setattr(args, k, v)
+    if args.pybullet is not None:  # old CLI: --pybullet N
+        args.physics, args.physics_sims = args.pybullet, "pybullet"
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
     import torch
 
+    if args.threads > 0:
+        torch.set_num_threads(args.threads)
+    installed = available_physics()
+    wanted = installed if args.physics_sims == "auto" else \
+        [] if args.physics_sims == "none" else [x.strip() for x in args.physics_sims.split(",")]
+    physics = [k for k in wanted if k in installed]
+    for k in set(wanted) - set(physics):
+        log.warning("physics simulator %r is not installed; skipping it", k)
+    if args.physics > 0 and not physics:
+        log.warning("no GP7 physics simulator installed (pip install mujoco); training on the simple simulator only")
+    per_physics = args.physics // len(physics) if physics else 0
+    plan = [("kinematic", args.kinematic)] + [(k, per_physics) for k in physics]
+    log.info("training plan: %s, %d epochs", ", ".join(f"{k} {n} demos" for k, n in plan), args.epochs)
+
     tok = build_tokenizer()
     args.work_dir.mkdir(parents=True, exist_ok=True)
-    cache = args.work_dir / f"demos_k{args.kinematic}_p{args.pybullet}_s{args.seed}.npz"
+    tag = "_".join(f"{k[0]}{n}" for k, n in plan)
+    cache = args.work_dir / f"demos_{tag}_s{args.seed}.npz"
     if args.resume and cache.is_file():
         data = dict(np.load(cache))
         log.info("loaded cached demonstrations %s", cache)
     else:
-        parts = [d for d in (collect("kinematic", args.kinematic, args.workers, args.seed),
-                             collect("pybullet", args.pybullet, args.workers, args.seed + 100_000)) if d is not None]
+        parts = []
+        for i, (kind, n) in enumerate(plan):
+            progress(0.02 + 0.13 * i / len(plan), f"generating {n} teacher demos in the {kind} simulator")
+            d = collect(kind, n, args.workers, args.seed + 100_000 * i)
+            if d is not None:
+                parts.append(d)
         data = {k: np.concatenate([p[k] for p in parts]) for k in parts[0]}
         np.savez(cache, **data)
     log.info("dataset: %d samples, vocab %d", len(data["done"]), len(tok))
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     meta = {"trained": time.strftime("%Y-%m-%d %H:%M"), "samples": int(len(data["done"])),
-            "teacher_episodes": {"kinematic": args.kinematic, "pybullet": args.pybullet}, "epochs": args.epochs,
+            "teacher_episodes": dict(plan), "epochs": args.epochs, "preset": args.preset,
             "objects": list(OBJECTS), "none_slot": NONE_SLOT}
-
     latest = args.work_dir / "latest.pt"
 
     def save(model, epoch: int, val: dict) -> None:
@@ -270,28 +317,35 @@ def main() -> None:
         meta.update(val, epochs_done=epoch)
         torch.save({"state_dict": model.state_dict(), "model_cfg": model.cfg, "vocab": tok.vocab, "meta": meta},
                    latest)
+        progress(0.15 + 0.7 * epoch / args.epochs,
+                 f"epoch {epoch}/{args.epochs}: val action error {val['val_action_l1']:.4f}, "
+                 f"grounding {val['val_grounding_acc']:.3f}")
 
     resume = args.work_dir / "resume.pt"
     if not args.resume:
         resume.unlink(missing_ok=True)
+    progress(0.15, "training the policy network")
     model, val = train(data, len(tok), args.epochs, args.batch, args.lr, args.seed, on_epoch=save,
                        resume_path=resume)
     meta.update(val)
     ckpt = {"state_dict": model.state_dict(), "model_cfg": model.cfg, "vocab": tok.vocab, "meta": meta}
     torch.save(ckpt, latest)
 
+    progress(0.86, "closed-loop evaluation on new layouts")
     policy = LearnedPolicy(checkpoint=latest)
     policy.load()
-    meta["closed_loop"] = evaluate(policy, args.eval_episodes, args.seed + 7, include_pybullet=args.pybullet > 0)
+    meta["closed_loop"] = evaluate(policy, args.eval_episodes, args.seed + 7, ["kinematic", *physics])
     if args.full_stack_episodes > 0:
+        progress(0.95, "full-app check through the perception pipeline")
         meta["full_stack"] = {"kinematic": full_stack_eval(latest, args.full_stack_episodes, "kinematic")}
-        if args.pybullet > 0:
-            meta["full_stack"]["pybullet"] = full_stack_eval(latest, max(6, args.full_stack_episodes // 2),
-                                                             "pybullet")
+        for k in physics:
+            meta["full_stack"][k] = full_stack_eval(latest, max(4, args.full_stack_episodes // 2), k)
     ckpt["meta"] = meta
     torch.save(ckpt, args.out)  # ship only the finished, evaluated model
     args.out.with_suffix(".json").write_text(json.dumps(meta, indent=2))
     log.info("saved %s (+ %s)", args.out, args.out.with_suffix(".json").name)
+    progress(1.0, f"done: {args.out}")
+    print(f"@@saved {args.out.resolve()}", flush=True)
 
 
 if __name__ == "__main__":

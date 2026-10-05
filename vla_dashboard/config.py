@@ -24,9 +24,10 @@ class AppConfig(BaseSettings):
     max_episode_steps: int = Field(600, ge=1)
 
     # ---- Simulator backend ----------------------------------------------------------
-    # "pybullet": Yaskawa Motoman GP7/GP8 with vendor CAD meshes + rigid-body physics.
-    # "kinematic": dependency-free numpy/OpenCV stand-in. "auto": pybullet if installed.
-    sim_backend: Literal["auto", "pybullet", "kinematic"] = "auto"
+    # "pybullet" / "mujoco": Yaskawa Motoman GP7/GP8 with vendor CAD meshes + rigid-body physics
+    # (MuJoCo has prebuilt Windows wheels; PyBullet needs a C++ compiler on Windows).
+    # "kinematic": dependency-free numpy/OpenCV stand-in. "auto": pybullet, else mujoco, else kinematic.
+    sim_backend: Literal["auto", "pybullet", "mujoco", "kinematic"] = "auto"
     robot_model: Literal["gp7", "gp8"] = "gp7"
     sim_mesh_detail: Literal["fast", "full"] = "fast"  # "full" = original CAD meshes (use with EGL/GPU)
     sim_async_render: bool = True  # render in a separate process so control never waits on the renderer

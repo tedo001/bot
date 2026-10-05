@@ -243,6 +243,10 @@ def _get_sim(kind: str):
             from ..sim.pybullet_sim import PyBulletSim
 
             _SIMS[kind] = PyBulletSim(async_render=False)
+        elif kind == "mujoco":
+            from ..sim.mujoco_sim import MuJoCoSim
+
+            _SIMS[kind] = MuJoCoSim(async_render=False)  # demos / evaluation never render
         else:
             from ..sim.simulator import TabletopSim
 
@@ -251,7 +255,7 @@ def _get_sim(kind: str):
 
 
 def cameras():
-    from ..sim.pybullet_sim import CAMERA
+    from ..sim.scene import CAMERA
     from ..sim.simulator import PinholeCamera
 
     return [PinholeCamera(640, 480), PinholeCamera(640, 480, **CAMERA)]
