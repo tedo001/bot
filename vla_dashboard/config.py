@@ -47,7 +47,7 @@ class AppConfig(BaseSettings):
     # "learned": trained transformer policy (default). "mock": rule-based OK-Robot teacher.
     brain_backend: Literal["learned", "mock", "openvla", "openpi"] = "learned"
     learned_checkpoint: str = ""  # empty = vla_dashboard/assets/models/vla_act.pt
-    learned_exec_horizon: int = Field(2, ge=1, le=8)  # actions executed per forward pass (re-plans every N ticks)
+    learned_exec_horizon: int = Field(1, ge=1, le=8)  # actions executed per forward pass (1 = re-plan every tick)
     learned_done_threshold: float = Field(0.5, gt=0, lt=1)
     openvla_url: str = "http://127.0.0.1:8000/act"  # openvla/vla-scripts/deploy.py
     openvla_unnorm_key: str = "bridge_orig"
