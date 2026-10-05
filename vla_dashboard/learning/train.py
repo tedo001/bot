@@ -259,10 +259,14 @@ def main() -> None:
             "teacher_episodes": {"kinematic": args.kinematic, "pybullet": args.pybullet}, "epochs": args.epochs,
             "objects": list(OBJECTS), "none_slot": NONE_SLOT}
 
-    def save(model, epoch: int, val: dict) -> None:  # a usable checkpoint after every epoch
+    latest = args.work_dir / "latest.pt"
+
+    def save(model, epoch: int, val: dict) -> None:
+        """Usable checkpoint after every epoch, kept in the work dir: the shipped file at --out is
+        only replaced once training and evaluation have finished."""
         meta.update(val, epochs_done=epoch)
         torch.save({"state_dict": model.state_dict(), "model_cfg": model.cfg, "vocab": tok.vocab, "meta": meta},
-                   args.out)
+                   latest)
 
     resume = args.work_dir / "resume.pt"
     if not args.resume:
@@ -271,18 +275,18 @@ def main() -> None:
                        resume_path=resume)
     meta.update(val)
     ckpt = {"state_dict": model.state_dict(), "model_cfg": model.cfg, "vocab": tok.vocab, "meta": meta}
-    torch.save(ckpt, args.out)
+    torch.save(ckpt, latest)
 
-    policy = LearnedPolicy(checkpoint=args.out)
+    policy = LearnedPolicy(checkpoint=latest)
     policy.load()
     meta["closed_loop"] = evaluate(policy, args.eval_episodes, args.seed + 7, include_pybullet=args.pybullet > 0)
     if args.full_stack_episodes > 0:
-        meta["full_stack"] = {"kinematic": full_stack_eval(args.out, args.full_stack_episodes, "kinematic")}
+        meta["full_stack"] = {"kinematic": full_stack_eval(latest, args.full_stack_episodes, "kinematic")}
         if args.pybullet > 0:
-            meta["full_stack"]["pybullet"] = full_stack_eval(args.out, max(6, args.full_stack_episodes // 2),
+            meta["full_stack"]["pybullet"] = full_stack_eval(latest, max(6, args.full_stack_episodes // 2),
                                                              "pybullet")
     ckpt["meta"] = meta
-    torch.save(ckpt, args.out)
+    torch.save(ckpt, args.out)  # ship only the finished, evaluated model
     args.out.with_suffix(".json").write_text(json.dumps(meta, indent=2))
     log.info("saved %s (+ %s)", args.out, args.out.with_suffix(".json").name)
 
