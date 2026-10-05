@@ -6,4 +6,7 @@ numpy>=1.24
 # Headless build on purpose: the regular opencv-python wheel ships its own Qt plugins,
 # which clash with PyQt6 ("Could not load the Qt platform plugin xcb").
 opencv-python-headless>=4.8
+# Yaskawa Motoman GP7/GP8 simulator (physics, IK, rendering). zlib licence.
+# Without it the app falls back to the built-in kinematic simulator.
+pybullet>=3.2.5
 pytest>=7

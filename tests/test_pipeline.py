@@ -12,8 +12,17 @@ from vla_dashboard.perception.skeleton import morphological_skeleton
 from vla_dashboard.schemas import InstructionPayload
 
 
-def _engine():
-    e = Engine(AppConfig(perception_mode="mock", brain_backend="mock"))
+try:
+    import pybullet  # noqa: F401
+
+    SIMS = ["kinematic", "pybullet"]
+except ImportError:
+    SIMS = ["kinematic"]
+
+
+def _engine(sim="kinematic"):
+    # PyBullet renders synchronously in tests: deterministic, no render process to spawn.
+    e = Engine(AppConfig(perception_mode="mock", brain_backend="mock", sim_backend=sim, sim_async_render=False))
     e.load()
     return e
 
@@ -27,8 +36,9 @@ def _run(e, text, max_steps=400):
     raise AssertionError("episode did not finish")
 
 
-def test_perception_localises_objects_in_3d():
-    e = _engine()
+@pytest.mark.parametrize("sim", SIMS)
+def test_perception_localises_objects_in_3d(sim):
+    e = _engine(sim)
     out = e.perception.process(e.sim.render())
     truth = e.object_positions()
     for name in ("cube", "cylinder", "sphere"):
@@ -43,6 +53,7 @@ def test_synonym_retrieval():
     assert [o.name for o in idx.resolve("put the red block on the ball")] == ["cube", "sphere"]
 
 
+@pytest.mark.parametrize("sim", SIMS)
 @pytest.mark.parametrize("text,check", [
     ("pick up the red cube", lambda e, r: r.robot.holding == "cube"),
     ("put the red cube on the blue cylinder",
@@ -50,12 +61,23 @@ def test_synonym_retrieval():
      and e.object_positions()["cube"][2] > 0.07),
     ("place the green ball next to the cube",
      lambda e, r: np.linalg.norm(e.object_positions()["sphere"][:2] - e.object_positions()["cube"][:2]) < 0.1),
+    ("put the green ball on the red cube",
+     lambda e, r: np.linalg.norm(e.object_positions()["sphere"][:2] - e.object_positions()["cube"][:2]) < 0.02
+     and e.object_positions()["sphere"][2] > 0.06),
 ])
-def test_episodes_succeed(text, check):
-    e = _engine()
+def test_episodes_succeed(sim, text, check):
+    e = _engine(sim)
     r = _run(e, text)
+    for _ in range(20):  # let physics settle after the release
+        e.tick(sync_perception=True)
     assert check(e, r), e.object_positions()
     assert e.brain.policy.failed is None
+
+
+def test_holding_survives_one_tick_check():
+    # the "pick up" check reads r.robot.holding at episode end; keep that path covered
+    e = _engine()
+    assert _run(e, "pick up the cube").robot.holding == "cube"
 
 
 def test_unknown_object_fails_cleanly():
@@ -64,8 +86,9 @@ def test_unknown_object_fails_cleanly():
     assert e.brain.policy.failed
 
 
-def test_estop_holds_position():
-    e = _engine()
+@pytest.mark.parametrize("sim", SIMS)
+def test_estop_holds_position(sim):
+    e = _engine(sim)
     e.controller.estop = True
     e.start_episode(InstructionPayload(text="pick up the cube"))
     before = e.sim.state()["ee"].copy()
@@ -123,3 +146,55 @@ def test_skeleton_is_thin():
     m[10:30, 5:35] = True
     sk = morphological_skeleton(m)
     assert 0 < (sk > 0).sum() < m.sum() * 0.3
+
+
+@pytest.mark.skipif("pybullet" not in SIMS, reason="pybullet not installed")
+def test_pybullet_camera_matches_renderer():
+    """The perception camera model must agree with PyBullet's projection to the pixel."""
+    e = _engine("pybullet")
+    pkt = e.sim.render()
+    for iid, name in pkt.gt_objects.items():
+        ys, xs = np.nonzero(pkt.instance_ids == iid)
+        uv, _ = e.sim.camera.project(e.object_positions()[name][None])
+        assert np.hypot(xs.mean() - uv[0, 0], ys.mean() - uv[0, 1]) < 3.0, name
+
+
+@pytest.mark.skipif("pybullet" not in SIMS, reason="pybullet not installed")
+def test_pybullet_async_render_never_blocks_control():
+    from vla_dashboard.sim.pybullet_sim import PyBulletSim
+
+    sim = PyBulletSim(async_render=True)
+    try:
+        assert sim.render().frame_id == 0  # placeholder: construction never blocks on the renderer
+        sim.wait_first_frame()
+        first = sim.render()
+        assert first.rgb.shape == (480, 640, 3) and first.instance_ids.max() == 3
+        t = time.perf_counter()
+        for _ in range(40):
+            sim.apply_delta(np.array([0.002, 0, 0, 0, 0, 0, 0]))
+            sim.render()
+        per_tick = (time.perf_counter() - t) / 40
+        assert per_tick < 0.03  # physics + IK + frame pickup; rendering happens in the other process
+        deadline = time.time() + 5
+        while sim.render().frame_id == first.frame_id and time.time() < deadline:
+            time.sleep(0.01)
+        assert sim.render().frame_id > first.frame_id  # new frames keep arriving
+    finally:
+        sim.close()
+
+
+@pytest.mark.skipif("pybullet" not in SIMS, reason="pybullet not installed")
+def test_pybullet_survives_render_process_crash():
+    from vla_dashboard.sim.pybullet_sim import PyBulletSim
+
+    sim = PyBulletSim(async_render=True)
+    try:
+        sim.wait_first_frame()
+        sim._proc.kill()
+        sim._proc.join(2)
+        for _ in range(3):
+            sim.apply_delta(np.array([0.002, 0, 0, 0, 0, 0, 0]))
+            pkt = sim.render()
+        assert pkt.rgb.shape == (480, 640, 3) and pkt.instance_ids.max() == 3  # in-process fallback frames
+    finally:
+        sim.close()

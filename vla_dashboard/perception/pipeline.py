@@ -78,10 +78,18 @@ class PerceptionPipeline:
         self.detector = RTDetrDetector(cfg.rtdetr_checkpoint, cfg.rtdetr_threshold, cfg.perception_mode)
         self.segmenter = RFDetrSegmenter(cfg.rfdetr_threshold, cfg.perception_mode)
         self._n = 0
+        self._det_n = self._seg_n = -1  # frame counters of the latest RT-DETR / RF-DETR results
         self._last_dets: list[Detection] = []
         self._last_seg: SegmentationResult | None = None
         self._last_skel: np.ndarray | None = None
         self._ocr_cache: list[OCRLabel] = []
+        self._ocr_time = -1e9
+
+    def invalidate(self) -> None:
+        """Forget cached results (call after the scene is reset or teleported)."""
+        self._last_seg = None
+        self._last_dets = []
+        self._det_n = self._seg_n = -1
         self._ocr_time = -1e9
 
     def load(self) -> None:
@@ -108,13 +116,18 @@ class PerceptionPipeline:
             self._ocr_time = now
         if n % self.cfg.det_stride == 0:
             self._last_dets = timed("rtdetr", lambda: self.detector.detect(pkt))
+            self._det_n = n
         if self._last_seg is None or n % self.cfg.seg_stride == 0:
             self._last_seg = timed("rfdetr", lambda: self.segmenter.segment(pkt))
+            self._seg_n = n
             self._last_skel = timed("skeleton", lambda: object_skeletons(self._last_seg.detections,
                                                                           self._last_seg.masks))
 
         t = time.perf_counter()
-        index = self._build_index(self._last_seg.detections or self._last_dets, self._ocr_cache)
+        # Localise from whichever detector ran most recently: RT-DETR keeps positions fresh on
+        # the frames where the heavier segmentation is skipped and its masks are reused.
+        fresh = self._last_dets if (self._last_dets and self._det_n >= self._seg_n) else self._last_seg.detections
+        index = self._build_index(fresh or self._last_dets, self._ocr_cache)
         stage["ground"] = (time.perf_counter() - t) * 1e3
 
         safety = any(d.label in self.cfg.safety_labels and d.score >= self.cfg.rtdetr_threshold

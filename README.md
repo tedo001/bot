@@ -3,6 +3,7 @@
 PyQt6 control dashboard and simulator for a Vision-Language-Action robot pipeline (Physical AI Robotics Challenge).
 
 * Natural-language instruction box, **Run Simulation** / Stop / Reset / E-STOP, live camera stream with overlays, console log, telemetry.
+* Simulator: **Yaskawa Motoman GP7** (or GP8) built from Yaskawa's CAD meshes (ROS-Industrial, BSD-3-Clause), with PyBullet physics, IK and real grasping and stacking. Rendering runs in its own process, so the 20 Hz control loop never waits on it. A dependency-free kinematic simulator is the fallback.
 * Perception: **PaddleOCR** (workspace labels) · **RT-DETR** via HF transformers (supportive detection + safety layer) · **RF-DETR** (instance segmentation → mask overlay + skeleton view). **No ultralytics** (AGPL).
 * Brain: `VLABrain` with pluggable backends: **OK-Robot-style** scripted policy (default, no GPU), **OpenVLA** REST client, **openpi π₀** websocket client.
 * `RobotController` with E-STOP, safety hold, watchdog and rate limits. Pydantic v2 schemas at every boundary.
@@ -13,7 +14,10 @@ PyQt6 control dashboard and simulator for a Vision-Language-Action robot pipelin
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python run.py                       # or: python -m vla_dashboard --backend mock
+python run.py                       # Yaskawa GP7 in PyBullet (falls back to the kinematic sim)
+python run.py --robot gp8           # the shorter-reach GP8
+python run.py --egl                 # GPU rendering + full-detail CAD meshes (Linux, GPU driver)
+python run.py --sim kinematic       # lightweight numpy/OpenCV simulator
 ```
 
 **PyCharm:** open the folder, set the interpreter to `.venv`, right-click `run.py` → *Run 'run'*.
@@ -46,12 +50,16 @@ vla_dashboard/
   frame_bus.py              LatestSlot (latest-wins mailbox), FramePacket
   engine.py                 Qt-free core: sim → perception → brain → controller
   workers.py                ControlWorker / PerceptionWorker (QThread), LoaderTask (QRunnable)
-  sim/simulator.py          kinematic tabletop sim + renderer (≈0.8 ms/frame)
+  sim/pybullet_sim.py       Yaskawa GP7/GP8 sim: physics + IK in-process, rendering in a spawned process
+  sim/motoman_urdf.py       GP7/GP8 URDF (vendor kinematics + meshes) + parallel gripper
+  sim/simulator.py          kinematic tabletop sim + renderer (≈0.8 ms/frame), fallback
+  assets/motoman/           Yaskawa CAD meshes (BSD-3-Clause, see README there)
   perception/               ocr.py, detector_rtdetr.py, segmenter_rfdetr.py, skeleton.py, pipeline.py
   brain/                    policies.py (OK-Robot / OpenVLA / openpi), vla_brain.py (ChunkScheduler)
   control/robot_controller.py   safety + home-robot adapter
   gui/                      main_window.py, frame_view.py (zero-copy), overlays.py
-tests/                      schema, pipeline, scheduler and episode tests (pytest)
+tests/                      schema, pipeline, scheduler, episode tests on both simulators (pytest)
+tools/decimate_meshes.py    rebuilds the smooth low-poly meshes used by the CPU renderer
 ```
 
 ## Tests

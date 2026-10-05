@@ -23,6 +23,15 @@ class AppConfig(BaseSettings):
     display_fps: float = Field(30.0, gt=0, le=120)  # GUI repaint cap; extra frames are dropped
     max_episode_steps: int = Field(600, ge=1)
 
+    # ---- Simulator backend ----------------------------------------------------------
+    # "pybullet": Yaskawa Motoman GP7/GP8 with vendor CAD meshes + rigid-body physics.
+    # "kinematic": dependency-free numpy/OpenCV stand-in. "auto": pybullet if installed.
+    sim_backend: Literal["auto", "pybullet", "kinematic"] = "auto"
+    robot_model: Literal["gp7", "gp8"] = "gp7"
+    sim_mesh_detail: Literal["fast", "full"] = "fast"  # "full" = original CAD meshes (use with EGL/GPU)
+    sim_async_render: bool = True  # render in a separate process so control never waits on the renderer
+    sim_use_egl: bool = False  # GPU rendering through PyBullet's EGL plugin (Linux + GPU driver)
+
     # ---- Perception ---------------------------------------------------------------
     # "auto" tries the real model and falls back to the mock if the package/weights are missing.
     perception_mode: Literal["auto", "mock", "real"] = "auto"

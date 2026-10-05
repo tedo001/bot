@@ -28,6 +28,32 @@
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
+## 2b. Simulator: Yaskawa Motoman GP7 in PyBullet
+
+The robot is built from Yaskawa's own CAD meshes and kinematics in ROS-Industrial `motoman_gp7_support` /
+`motoman_gp8_support` (BSD-3-Clause). The xacro is expanded in Python, so no ROS install is needed.
+
+```
+control thread (main process)                      render process (multiprocessing "spawn")
+PyBullet client A                                  PyBullet client B (same scene, no physics)
+  IK (DLS, warm-started, reseeds on failure)         newest state only (stale ones dropped)
+  12 × 240 Hz physics substeps per tick              getCameraImage (TinyRenderer CPU / EGL GPU)
+  grasp = fixed constraint at the TCP                RGB + instance ids -> 3 shared-memory buffers
+  sends joint angles + object poses (~200 B) ──►     sends buffer index + robot skeleton ◄──
+render(): non-blocking pickup of the newest frame
+```
+
+* **Why a separate process:** a mesh-heavy frame costs 40–120 ms on a CPU, and PyBullet keeps Python's GIL for much of it, so a thread would still stall the loop. In its own process, rendering runs truly in parallel. Measured here: the control loop holds 20.0 Hz (min 18.7) while frames render.
+* **Zero-copy hand-off:** frames come back through `multiprocessing.shared_memory` triple buffers. Only a few bytes cross the pipe each way.
+* **Robustness:**
+  * If the render process dies, the simulator falls back to in-process rendering without stopping (tested by killing it).
+  * Unreachable IK targets keep the arm where it is.
+  * A zero-motion command (E-STOP or hold) leaves the joints exactly as they were.
+* **Pixel-exact perception:** the same pinhole camera model drives PyBullet's view and projection matrices and the perception's 2D→3D lifting. Mask centroids agree with projected object centres to about 1 px.
+* **Mesh detail:**
+  * `fast` (default): CAD meshes decimated to 30%, written as OBJ with smooth normals so they don't render faceted.
+  * `full`: the original STLs, best with `--egl` on a GPU.
+
 ## 3. Why it is fast
 
 1. **Latest-wins hand-off (`LatestSlot`).** Producer and consumer stages never queue. A slow detector skips stale frames instead of building a backlog, so latency stays bounded at ≤ 1 producer period + 1 consumer run.
