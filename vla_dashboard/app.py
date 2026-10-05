@@ -43,6 +43,9 @@ def _use_pyqt_platform_plugins() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # legacy Windows consoles can't encode "→", "π₀" …
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     cfg = parse_args(argv)
     _use_pyqt_platform_plugins()

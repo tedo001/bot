@@ -44,7 +44,16 @@ def preflight() -> None:
               "  Fix (run in PyCharm's Terminal):\n"
               f"    \"{sys.executable}\" -m pip install -r \"{ROOT / 'requirements.txt'}\"")
     for mod, what in OPTIONAL.items():
-        if importlib.util.find_spec(mod) is None:
+        if importlib.util.find_spec(mod) is not None:
+            continue
+        if mod == "pybullet" and sys.platform == "win32":
+            _warn("'pybullet' is not installed, so the Yaskawa GP7 simulator is off (using the simple simulator).\n"
+                  "  PyPI has no Windows build of pybullet, so it must be compiled once:\n"
+                  "    1. install 'Microsoft C++ Build Tools' (workload: Desktop development with C++)\n"
+                  "       https://visualstudio.microsoft.com/visual-cpp-build-tools/\n"
+                  "    2. in PyCharm's Terminal (venv active):  pip install pybullet\n"
+                  "  or, with conda:  conda install -c conda-forge pybullet")
+        else:
             _warn(f"'{mod}' is not installed: {what}. Install with: pip install -r requirements.txt")
 
     if sys.platform.startswith("linux") and os.environ.get("QT_QPA_PLATFORM", "") not in ("offscreen", "minimal"):

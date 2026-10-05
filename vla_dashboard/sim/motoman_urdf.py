@@ -48,8 +48,8 @@ FINGER_TRAVEL = 0.035  # per finger, fully open
 
 def _mesh_link(spec: MotomanSpec, link: str, visual_dir: str) -> str:
     ext = "obj" if visual_dir == "visual_fast" else "stl"
-    vis = ASSETS / spec.name / visual_dir / f"{spec.name}_{link}.{ext}"
-    col = ASSETS / spec.name / "collision" / f"{spec.name}_{link}.stl"
+    vis = (ASSETS / spec.name / visual_dir / f"{spec.name}_{link}.{ext}").as_posix()  # "/" works on Windows too
+    col = (ASSETS / spec.name / "collision" / f"{spec.name}_{link}.stl").as_posix()
     r, g, b, a = YASKAWA_BLUE
     return f"""
   <link name="{link}">

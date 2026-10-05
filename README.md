@@ -9,7 +9,7 @@ PyQt6 control dashboard and simulator for a Vision-Language-Action robot pipelin
 * `RobotController` with E-STOP, safety hold, watchdog and rate limits. Pydantic v2 schemas at every boundary.
 * Low latency: latest-frame hand-off, stride-scheduled models, O(1) scene index, action chunking with async prefetch, zero-copy frame display. See [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Run (Ubuntu, Python 3.10+)
+## Run (Ubuntu or Windows, Python 3.10+)
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -19,6 +19,22 @@ python run.py --robot gp8           # the shorter-reach GP8
 python run.py --egl                 # GPU rendering + full-detail CAD meshes (Linux, GPU driver)
 python run.py --sim kinematic       # lightweight numpy/OpenCV simulator
 ```
+
+### Windows (PowerShell / PyCharm)
+
+```powershell
+py -3.12 -m venv .venv            # any Python 3.10–3.13
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt   # everything except pybullet (PyPI has no Windows build of it)
+python run.py                     # works now, with the simple simulator
+```
+
+To get the **Yaskawa GP7 simulator** on Windows, `pybullet` has to be compiled once:
+
+1. Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and tick the **Desktop development with C++** workload. Restart PyCharm afterwards.
+2. In PyCharm's Terminal with the venv active: `pip install pybullet` (compiles for a few minutes).
+
+Alternatively, with conda: `conda install -c conda-forge pybullet`. Linux and WSL2 get a prebuilt pybullet from pip, with no compiler needed.
 
 **PyCharm:** open the folder, set the interpreter to `.venv`, right-click `run.py` → *Run 'run'*.
 Try "Put the red cube on the blue cylinder", "Pick up the green ball", "Place the sphere next to the cube". **Ctrl+Enter** runs, **Esc** toggles E-STOP.
@@ -34,6 +50,7 @@ Try "Put the red cube on the blue cylinder", "Pick up the green ball", "Place th
 | `Could not load the Qt platform plugin "xcb" … cv2/qt/plugins` | `opencv-python` (GUI build) overrides Qt's plugin path | Handled automatically now; clean fix: `pip uninstall -y opencv-python && pip install opencv-python-headless` |
 | `xcb-cursor0 or libxcb-cursor0 is needed` | missing Ubuntu library for Qt ≥ 6.5 | `sudo apt install libxcb-cursor0 libxkbcommon-x11-0 libegl1` |
 | `dataclass() got an unexpected keyword argument 'slots'` | Python older than 3.10 | use a Python 3.10+ interpreter |
+| `Microsoft Visual C++ 14.0 or greater is required` / `Failed building wheel for pybullet` (Windows) | no prebuilt pybullet for Windows on PyPI | see **Windows** above: C++ Build Tools then `pip install pybullet`, or conda |
 
 ## The learned policy
 

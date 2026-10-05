@@ -8,7 +8,9 @@ numpy>=1.24
 opencv-python-headless>=4.8
 # Yaskawa Motoman GP7/GP8 simulator (physics, IK, rendering). zlib licence.
 # Without it the app falls back to the built-in kinematic simulator.
-pybullet>=3.2.5
+# PyPI has no Windows wheels for pybullet (it compiles from source), so on Windows install it
+# as a separate step - see README "Windows": C++ Build Tools + `pip install pybullet`, or conda.
+pybullet>=3.2.5; sys_platform != "win32"
 # Learned VLA policy (the default robot brain): training + ~1 ms CPU inference.
 # CPU-only wheel: pip install torch --index-url https://download.pytorch.org/whl/cpu
 torch>=2.2
