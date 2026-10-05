@@ -335,8 +335,11 @@ class PyBulletSim:
             pass
 
     # ------------------------------------------------------------------ lifecycle
-    def reset(self) -> None:
+    def reset(self, layout: dict[str, tuple[float, float]] | None = None, render_static: bool = True) -> None:
+        """``layout`` maps object name -> (x, y) (training / evaluation randomisation). The printed
+        table labels stay at the default positions."""
         p, kw = self.p, dict(physicsClientId=self.cid)
+        layout = layout or {}
         if getattr(self, "_constraint", None) is not None:  # drop a grasp left over from the last episode
             p.removeConstraint(self._constraint, **kw)
         self.ee = HOME_EE.copy()
@@ -345,8 +348,9 @@ class PyBulletSim:
         self.holding: str | None = None
         self._constraint: int | None = None
         for o in OBJECTS:
+            x, y = layout.get(o.name, o.xy)
             p.resetBasePositionAndOrientation(self.scene["objects"][o.name],
-                                              [o.xy[0], o.xy[1], TABLE_TOP_Z + o.height / 2], [0, 0, 0, 1], **kw)
+                                              [x, y, TABLE_TOP_Z + o.height / 2], [0, 0, 0, 1], **kw)
             p.resetBaseVelocity(self.scene["objects"][o.name], [0, 0, 0], [0, 0, 0], **kw)
         for j, q in zip(self.scene["movable"], self._rest):
             p.resetJointState(self.scene["robot"], j, q, **kw)

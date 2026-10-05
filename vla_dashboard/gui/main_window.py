@@ -107,9 +107,10 @@ class MainWindow(QMainWindow):
         bbox = QGroupBox("VLA backend")
         fl = QFormLayout(bbox)
         self.backend = QComboBox()
-        self.backend.addItems(["mock", "openvla", "openpi"])
+        self.backend.addItems(["learned", "mock", "openvla", "openpi"])
         self.backend.setCurrentText(self.cfg.brain_backend)
-        self.backend.setToolTip("mock = OK-Robot-style scripted policy (no GPU)\n"
+        self.backend.setToolTip("learned = trained transformer policy (imitation learning, CPU, ~1 ms)\n"
+                                "mock = rule-based OK-Robot planner (the teacher)\n"
                                 "openvla = REST client for openvla/vla-scripts/deploy.py\n"
                                 "openpi = websocket client for openpi/scripts/serve_policy.py")
         fl.addRow("Policy", self.backend)

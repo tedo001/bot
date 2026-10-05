@@ -100,14 +100,19 @@ class TabletopSim:
         self.reset()
 
     # ------------------------------------------------------------------ lifecycle
-    def reset(self) -> None:
+    DEFAULT_LAYOUT = {"cube": (-0.22, 0.46), "cylinder": (-0.05, 0.46), "sphere": (0.12, 0.46)}
+
+    def reset(self, layout: dict[str, tuple[float, float]] | None = None, render_static: bool = True) -> None:
+        """``layout`` maps object name -> (x, y) on the table (training / evaluation randomisation)."""
+        xy = {**self.DEFAULT_LAYOUT, **(layout or {})}
         self.arm = ArmState()
         self.objects = [
-            SimObject("cube", "cube", (220, 30, 30), 0.05, 0.05, np.array([-0.22, 0.46, 0.025]), 1),
-            SimObject("cylinder", "cylinder", (35, 45, 215), 0.05, 0.06, np.array([-0.05, 0.46, 0.03]), 2),
-            SimObject("sphere", "sphere", (40, 200, 70), 0.05, 0.05, np.array([0.12, 0.46, 0.025]), 3),
+            SimObject("cube", "cube", (220, 30, 30), 0.05, 0.05, np.array([*xy["cube"], 0.025]), 1),
+            SimObject("cylinder", "cylinder", (35, 45, 215), 0.05, 0.06, np.array([*xy["cylinder"], 0.03]), 2),
+            SimObject("sphere", "sphere", (40, 200, 70), 0.05, 0.05, np.array([*xy["sphere"], 0.025]), 3),
         ]
-        self._static_rgb = self._render_static()
+        if render_static:  # skipped when generating training data without images
+            self._static_rgb = self._render_static()
 
     # ------------------------------------------------------------------ dynamics
     def apply_delta(self, d: np.ndarray) -> None:

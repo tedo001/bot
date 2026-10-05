@@ -70,7 +70,7 @@ class ActionCommand(_Frozen):
     dpitch: float = Field(0.0, ge=-MAX_ROTATION, le=MAX_ROTATION)
     dyaw: float = Field(0.0, ge=-MAX_ROTATION, le=MAX_ROTATION)
     gripper: float = Field(0.0, ge=-1.0, le=1.0)
-    source: Literal["mock", "openvla", "openpi", "safety"] = "mock"
+    source: Literal["learned", "mock", "openvla", "openpi", "safety"] = "mock"
     inference_ms: float = Field(0.0, ge=0.0)
 
     FIELDS: ClassVar[tuple[str, ...]] = ("dx", "dy", "dz", "droll", "dpitch", "dyaw", "gripper")
@@ -96,7 +96,7 @@ class ActionCommand(_Frozen):
         )
 
     @classmethod
-    def hold(cls, source: Literal["mock", "openvla", "openpi", "safety"] = "safety") -> ActionCommand:
+    def hold(cls, source: Literal["learned", "mock", "openvla", "openpi", "safety"] = "safety") -> ActionCommand:
         return cls(source=source)
 
     def to_array(self) -> np.ndarray:

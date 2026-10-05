@@ -1,9 +1,9 @@
 """Policy backends. All return an action *chunk*: an (H, 7) array of
 (dx, dy, dz, droll, dpitch, dyaw, gripper_delta) in the dashboard's convention.
 
-* ``OKRobotScriptedPolicy``: modular OK-Robot-style pipeline (open-vocabulary
-  perception -> grasp -> place) driven by the scene index. No GPU needed; this is
-  the default so the app runs out of the box.
+* ``LearnedPolicy`` (vla_dashboard/learning): trained transformer, the default.
+* ``OKRobotScriptedPolicy``: rule-based OK-Robot-style planner. Used as the *teacher*
+  that generates training demonstrations, and selectable as the "mock" backend.
 * ``OpenVLARestPolicy``: talks to ``openvla/vla-scripts/deploy.py`` (POST /act).
 * ``OpenPIWebsocketPolicy``: talks to ``openpi/scripts/serve_policy.py`` through
   ``openpi_client`` (LIBERO observation format, action chunks of 10+ steps).
@@ -76,6 +76,37 @@ _PICK = re.compile(r"\b(pick|grab|grasp|lift|take|get|put|place|stack|move|bring
 _HOME = re.compile(r"\b(home|reset|retract)\b")
 
 
+HOME_POS = np.array([0.10, 0.60, 0.25])
+TASKS = ("pick", "stack", "next_to", "home")
+
+
+def plan_waypoints(task: str, src: np.ndarray | None = None, dst: np.ndarray | None = None,
+                   hover_z: float = 0.14, lift_z: float = 0.16) -> list[tuple[str, np.ndarray | None, float]]:
+    """Waypoints (phase name, target xyz or None for gripper-only, gripper opening) for a task."""
+    if task == "home":
+        return [("home", HOME_POS.copy(), 1.0)]
+    src = np.asarray(src, dtype=np.float64)
+    plan = [
+        ("approach", np.array([src[0], src[1], hover_z]), 1.0),
+        ("descend", src.copy(), 1.0),
+        ("grasp", None, 0.0),
+        ("lift", np.array([src[0], src[1], lift_z]), 0.0),
+    ]
+    if task in ("stack", "next_to"):
+        dst = np.asarray(dst, dtype=np.float64)
+        if task == "next_to":  # offset sideways toward the side the object came from
+            side = 1.0 if src[0] > dst[0] else -1.0
+            dst = dst + np.array([0.07 * side, 0.0, 0.0])
+        place_z = (dst[2] + 0.055) if task == "stack" else src[2]
+        plan += [
+            ("transport", np.array([dst[0], dst[1], lift_z]), 0.0),
+            ("lower", np.array([dst[0], dst[1], place_z]), 0.0),
+            ("release", None, 1.0),
+            ("retreat", np.array([dst[0], dst[1], lift_z]), 1.0),
+        ]
+    return plan
+
+
 class OKRobotScriptedPolicy:
     """Closed-loop waypoint policy: approach -> descend -> grasp -> lift -> transport ->
     lower -> release -> retreat. Targets come from the perception scene index, so a
@@ -112,38 +143,27 @@ class OKRobotScriptedPolicy:
     def failed(self) -> str | None:
         return self._failed
 
+    def set_task(self, task: str, src: np.ndarray | None = None, dst: np.ndarray | None = None) -> None:
+        """Teacher mode (used to generate training demonstrations): give the task and the
+        object positions directly instead of parsing the instruction."""
+        self.reset()
+        self._plan = plan_waypoints(task, src, dst, self.HOVER_Z, self.LIFT_Z)
+
     def _make_plan(self, obs: Observation) -> list | None:
         text = obs.instruction.lower()
-        home = np.array([0.10, 0.60, 0.25])
         if _HOME.search(text) and not _PICK.search(text):
-            return [("home", home, 1.0)]
+            return plan_waypoints("home")
         if obs.scene is None:
             return None
         objs = obs.scene.resolve(text)
         if not objs:
             self._failed = "no object in instruction matched the scene"
             return []
-        tgt = np.asarray(objs[0].position)
-        plan = [
-            ("approach", np.array([tgt[0], tgt[1], self.HOVER_Z]), 1.0),
-            ("descend", tgt.copy(), 1.0),
-            ("grasp", None, 0.0),
-            ("lift", np.array([tgt[0], tgt[1], self.LIFT_Z]), 0.0),
-        ]
+        src = np.asarray(objs[0].position)
         if len(objs) > 1 and _PLACE.search(text):
-            dst = np.asarray(objs[1].position)
-            stack = bool(re.search(r"\b(on|onto|on top of)\b", text))
-            if not stack:  # "next to": offset sideways toward the source
-                side = 1.0 if tgt[0] > dst[0] else -1.0
-                dst = dst + np.array([0.07 * side, 0.0, 0.0])
-            place_z = (dst[2] + 0.055) if stack else tgt[2]
-            plan += [
-                ("transport", np.array([dst[0], dst[1], self.LIFT_Z]), 0.0),
-                ("lower", np.array([dst[0], dst[1], place_z]), 0.0),
-                ("release", None, 1.0),
-                ("retreat", np.array([dst[0], dst[1], self.LIFT_Z]), 1.0),
-            ]
-        return plan
+            task = "stack" if re.search(r"\b(on|onto|on top of)\b", text) else "next_to"
+            return plan_waypoints(task, src, np.asarray(objs[1].position), self.HOVER_Z, self.LIFT_Z)
+        return plan_waypoints("pick", src, None, self.HOVER_Z, self.LIFT_Z)
 
     def infer(self, obs: Observation) -> np.ndarray:
         if self._plan is None:
@@ -269,6 +289,10 @@ class OpenPIWebsocketPolicy:
 
 
 def make_policy(cfg: AppConfig) -> Policy:
+    if cfg.brain_backend == "learned":
+        from ..learning.policy import LearnedPolicy
+
+        return LearnedPolicy(cfg)
     return {"mock": OKRobotScriptedPolicy, "openvla": OpenVLARestPolicy, "openpi": OpenPIWebsocketPolicy}[
         cfg.brain_backend
     ](cfg)

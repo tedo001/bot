@@ -54,6 +54,41 @@ render(): non-blocking pickup of the newest frame
   * `fast` (default): CAD meshes decimated to 30%, written as OBJ with smooth normals so they don't render faceted.
   * `full`: the original STLs, best with `--egl` on a GPU.
 
+## 2c. The learned policy (default robot brain)
+
+A trained network, not a rule set, turns instruction + perception + robot state into motor commands.
+
+```
+instruction ─► tokenizer ─► [w1 … w12] ┐
+perception SceneIndex + camera ─► [obj1 … obj6]   (3D position, multi-scale offset to gripper,
+                                         │          colour chromaticity, label word, score)
+robot state ─► [PROPRIO] (xyz + Fourier features, gripper opening, holding)
+                                         ▼
+          [QUERY] + tokens ─► Transformer encoder (2 layers, d=96)
+                 │                 └─► pointer heads: P(source = obj_i), P(destination = obj_i), or none
+                 ▼                                    │ soft weights select those objects' features
+          task embedding ⊕ selected source ⊕ selected destination ⊕ proprio ─► MLP
+                 ─► next 8 actions (dx dy dz droll dpitch dyaw grip) + P(done)
+```
+
+* **Training (imitation learning):**
+  * The rule-based OK-Robot planner is the teacher. It is told the task directly and generates demonstrations in both simulators.
+  * Object layouts are randomised, and phrasings vary across templates and synonyms.
+  * DART-style action noise is injected into executed actions while the labels stay the teacher's corrective actions.
+  * "Unknown object" instructions teach the model to stop.
+  * Loss: L1 on the action chunk, with near-term actions weighted more, plus BCE on done and cross-entropy on grounding.
+* **Train/run-time parity:**
+  * `learning/common.py` builds the model inputs for both training and the live app.
+  * Training inputs reproduce the live perception's 2D→3D lifting error, lighting and colour changes, missing labels and random slot order.
+* **No rules at run time:** a test replaces the planner, the waypoint generator and the synonym lookup with functions that raise, and the learned policy still completes the task.
+* **Run-time behaviour:**
+  * ~1 ms per forward pass on CPU.
+  * The policy re-plans every 2 ticks from the newest perception.
+  * It stops after two consecutive done predictions, and reports a failure if it finds no matching object.
+* **Explainability:** the GUI marks the model's chosen source and destination objects and shows its done probability.
+
+Closed-loop results are written to `assets/models/vla_act.json` by `python -m vla_dashboard.learning.train`.
+
 ## 3. Why it is fast
 
 1. **Latest-wins hand-off (`LatestSlot`).** Producer and consumer stages never queue. A slow detector skips stale frames instead of building a backlog, so latency stays bounded at ≤ 1 producer period + 1 consumer run.

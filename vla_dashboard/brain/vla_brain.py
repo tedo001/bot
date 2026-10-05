@@ -105,15 +105,30 @@ class VLABrain:
     def __init__(self, cfg: AppConfig, policy: Policy | None = None) -> None:
         self.cfg = cfg
         self.policy = policy or make_policy(cfg)
-        # The scripted policy is closed-loop on perception, so it re-plans every chunk
-        # without prefetch; learned remote policies benefit from prefetch.
-        prefetch = cfg.prefetch_ratio if self.policy.source != "mock" else 0.0
-        self.scheduler = ChunkScheduler(self.policy, prefetch, cfg.inference_timeout_s)
+        self.scheduler = self._make_scheduler()
         self._lock = threading.Lock()
         self._instruction: InstructionPayload | None = None
 
+    def _make_scheduler(self) -> ChunkScheduler:
+        # Local policies (learned model ~1 ms, scripted) re-plan synchronously from the newest
+        # observation; only slow remote VLAs (OpenVLA / openpi servers) benefit from prefetch.
+        remote = self.policy.source in ("openvla", "openpi")
+        return ChunkScheduler(self.policy, self.cfg.prefetch_ratio if remote else 0.0, self.cfg.inference_timeout_s)
+
     def load(self) -> None:
-        self.policy.load()
+        try:
+            self.policy.load()
+        except Exception as exc:  # noqa: BLE001
+            if self.policy.source != "learned":
+                raise
+            # Keep the app usable, but make it impossible to miss that no model is driving.
+            log.error("LEARNED POLICY UNAVAILABLE (%s) - falling back to the rule-based teacher. "
+                      "Install torch and/or train: python -m vla_dashboard.learning.train", exc)
+            from .policies import OKRobotScriptedPolicy
+
+            self.scheduler.shutdown()
+            self.policy = OKRobotScriptedPolicy(self.cfg)
+            self.scheduler = self._make_scheduler()
 
     def set_instruction(self, payload: InstructionPayload) -> None:
         with self._lock:

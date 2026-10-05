@@ -14,7 +14,7 @@ from .gui.main_window import MainWindow
 
 def parse_args(argv: list[str] | None = None) -> AppConfig:
     ap = argparse.ArgumentParser(description="VLA robot dashboard + simulator")
-    ap.add_argument("--backend", choices=["mock", "openvla", "openpi"], help="VLA policy backend")
+    ap.add_argument("--backend", choices=["learned", "mock", "openvla", "openpi"], help="VLA policy backend")
     ap.add_argument("--perception", choices=["auto", "mock", "real"], help="perception model mode")
     ap.add_argument("--hz", type=float, help="control loop rate")
     ap.add_argument("--sim", choices=["auto", "pybullet", "kinematic"], help="simulator backend")

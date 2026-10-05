@@ -9,4 +9,7 @@ opencv-python-headless>=4.8
 # Yaskawa Motoman GP7/GP8 simulator (physics, IK, rendering). zlib licence.
 # Without it the app falls back to the built-in kinematic simulator.
 pybullet>=3.2.5
+# Learned VLA policy (the default robot brain): training + ~1 ms CPU inference.
+# CPU-only wheel: pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
 pytest>=7

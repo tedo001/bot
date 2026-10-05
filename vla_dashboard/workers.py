@@ -182,7 +182,8 @@ class ControlWorker(QThread):
                 perc_ms = 1e3 / max(self.perception.hz, 1e-6)
                 hud = (f"frame {res.packet.frame_id}  loop {loop_hz:4.1f} Hz  perc {perc_ms:5.1f} ms  "
                        f"vla {res.command.inference_ms:5.1f} ms  [{self.engine.brain.phase}]")
-                self.frame_ready.emit(compose(res.packet.rgb, res.perception, self.flags, hud))
+                targets = getattr(self.engine.brain.policy, "targets", (None, None))
+                self.frame_ready.emit(compose(res.packet.rgb, res.perception, self.flags, hud, targets))
             if now - last_state >= 0.1:
                 last_state = now
                 self.state_ready.emit(SystemState(

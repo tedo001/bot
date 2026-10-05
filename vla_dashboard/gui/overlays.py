@@ -25,8 +25,10 @@ class OverlayFlags:
     hud: bool = True
 
 
-def compose(rgb: np.ndarray, perc: PerceptionOutput | None, flags: OverlayFlags, hud: str = "") -> np.ndarray:
-    """Return a NEW array with overlays; the source frame stays untouched (it is shared)."""
+def compose(rgb: np.ndarray, perc: PerceptionOutput | None, flags: OverlayFlags, hud: str = "",
+            targets: tuple[str | None, str | None] = (None, None)) -> np.ndarray:
+    """Return a NEW array with overlays; the source frame stays untouched (it is shared).
+    ``targets``: (source, destination) object names chosen by the learned policy, highlighted."""
     out = rgb.copy()
     if perc is None:
         return out
@@ -59,6 +61,14 @@ def compose(rgb: np.ndarray, perc: PerceptionOutput | None, flags: OverlayFlags,
             if perc.summary.safety_stop:
                 b = d.box
                 cv2.rectangle(out, (int(b.x1), int(b.y1)), (int(b.x2), int(b.y2)), (255, 0, 0), 2)
+    if targets != (None, None):  # what the learned model decided to act on
+        for obj in perc.summary.objects:
+            for name, tag, col in ((targets[0], "SRC", (255, 60, 200)), (targets[1], "DST", (255, 160, 0))):
+                if name and obj.name == name:
+                    b = obj.box
+                    p1, p2 = (int(b.x1) - 4, int(b.y1) - 4), (int(b.x2) + 4, int(b.y2) + 4)
+                    cv2.rectangle(out, p1, p2, col, 2, cv2.LINE_AA)
+                    cv2.putText(out, tag, (p1[0], p2[1] + 13), cv2.FONT_HERSHEY_SIMPLEX, 0.42, col, 1, cv2.LINE_AA)
     if flags.ocr:
         for lab in perc.summary.ocr:
             b = lab.box
