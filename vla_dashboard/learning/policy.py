@@ -81,8 +81,8 @@ class LearnedPolicy:
         with torch.inference_mode():
             batch = {k: torch.from_numpy(np.asarray(v))[None] for k, v in feats.items()
                      if k in ("tokens", "obj_feat", "obj_label", "obj_mask", "proprio")}
-            actions, done, src, dst = self.model(batch["tokens"], batch["obj_feat"], batch["obj_label"],
-                                                 batch["obj_mask"], batch["proprio"])
+            actions, done, src, dst, _ = self.model(batch["tokens"], batch["obj_feat"], batch["obj_label"],
+                                                    batch["obj_mask"], batch["proprio"])
         src_p = torch.softmax(src[0], -1).numpy()
         dst_p = torch.softmax(dst[0], -1).numpy()
         return {"chunk": actions[0].numpy().astype(np.float64) * ACTION_SCALE,

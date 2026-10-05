@@ -143,6 +143,13 @@ class OKRobotScriptedPolicy:
     def failed(self) -> str | None:
         return self._failed
 
+    def current_waypoint(self) -> tuple[np.ndarray | None, float] | None:
+        """(target xyz or None for gripper-only phases, gripper target) of the active phase."""
+        if self._plan is None or self._i >= len(self._plan):
+            return None
+        _, wp, grip = self._plan[self._i]
+        return wp, grip
+
     def set_task(self, task: str, src: np.ndarray | None = None, dst: np.ndarray | None = None) -> None:
         """Teacher mode (used to generate training demonstrations): give the task and the
         object positions directly instead of parsing the instruction."""

@@ -62,7 +62,8 @@ def train(data: dict[str, np.ndarray], vocab_size: int, epochs: int, batch: int,
     n_val = max(512, n // 20)
     val_idx, tr_idx = perm[:n_val], perm[n_val:]
     tens = {k: torch.from_numpy(v) for k, v in data.items()}
-    model = ActPolicyNet(vocab_size)
+    has_aux = "subgoal" in data
+    model = ActPolicyNet(vocab_size, aux_dim=4 if has_aux else 0)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     steps = epochs * math.ceil(len(tr_idx) / batch)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=lr, total_steps=steps, pct_start=0.05)
@@ -71,8 +72,10 @@ def train(data: dict[str, np.ndarray], vocab_size: int, epochs: int, batch: int,
 
     def losses(idx):
         b = {k: v[idx] for k, v in tens.items()}
-        act, done, src, dst = model(b["tokens"], b["obj_feat"], b["obj_label"], b["obj_mask"], b["proprio"])
+        act, done, src, dst, aux = model(b["tokens"], b["obj_feat"], b["obj_label"], b["obj_mask"], b["proprio"])
         l_act = (F.l1_loss(act, b["actions"], reduction="none") * w).mean()
+        if aux is not None:  # subgoal: sharper sense of *where* to go -> more precise placing
+            l_act = l_act + 0.5 * F.smooth_l1_loss(aux, b["subgoal"])
         l_done = F.binary_cross_entropy_with_logits(done, b["done"])
         l_ptr = F.cross_entropy(src, b["src"]) + F.cross_entropy(dst, b["dst"])
         acc = ((src.argmax(-1) == b["src"]).float().mean() + (dst.argmax(-1) == b["dst"]).float().mean()) / 2
@@ -147,7 +150,7 @@ def evaluate(policy: LearnedPolicy, episodes: int, seed: int, include_pybullet: 
     sims = ["kinematic"] + (["pybullet"] if include_pybullet else [])
     for kind in sims:
         sim = _get_sim(kind)
-        n = episodes if kind == "kinematic" else max(10, episodes // 2)
+        n = episodes
         for split, kw in (("train_phrasing", {}), ("heldout_phrasing", {"heldout": True}),
                           ("no_labels", {})):
             ok_by_kind: dict[str, list[bool]] = {}
@@ -224,7 +227,7 @@ def _spec_from_text(text: str) -> TaskSpec:  # evaluation bookkeeping only (judg
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--kinematic", type=int, default=5000, help="teacher episodes in the kinematic sim")
-    ap.add_argument("--pybullet", type=int, default=1500, help="teacher episodes in the PyBullet GP7 sim")
+    ap.add_argument("--pybullet", type=int, default=3000, help="teacher episodes in the PyBullet GP7 sim")
     ap.add_argument("--epochs", type=int, default=16)
     ap.add_argument("--batch", type=int, default=512)
     ap.add_argument("--lr", type=float, default=2e-3)

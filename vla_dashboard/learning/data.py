@@ -19,7 +19,7 @@ Robustness tricks:
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -56,12 +56,31 @@ DEFAULT_LAYOUT = {"cube": (-0.22, 0.46), "cylinder": (-0.05, 0.46), "sphere": (0
 ROBOT_BASE_XY = np.array([0.30, 0.80])  # PyBullet GP7 base; keep objects outside its dead zone
 
 
+# Verbs / filler words that may be blanked out during training (word dropout), so an
+# unfamiliar verb ("grasp the cube") is not mistaken for an unknown object. Object words
+# and relation words (on / next to / beside …) are never dropped: they carry the task.
+FILLER_WORDS = {"pick", "up", "grab", "lift", "take", "get", "please", "can", "you", "put", "place", "stack",
+                "move", "set", "the"}
+SUBGOAL_SCALE = 0.05  # metres; subgoal offsets are labelled as clip(offset / scale, -3, 3)
+
+
 @dataclass
 class TaskSpec:
     kind: str  # pick | stack | next_to | home | unknown
     text: str
     src: str | None = None
     dst: str | None = None
+    template: str = ""
+    pa: str = ""
+    pb: str = ""
+
+
+def drop_filler_words(spec: TaskSpec, rng: np.random.Generator, p: float = 0.4) -> TaskSpec:
+    """Replace some template filler words with an out-of-vocabulary word (-> <unk>)."""
+    if not spec.template:
+        return spec
+    words = [("zzz" if (w in FILLER_WORDS and rng.random() < p) else w) for w in spec.template.split()]
+    return replace(spec, text=" ".join(words).format(a=spec.pa, b=spec.pb))
 
 
 def all_training_texts() -> list[str]:
@@ -89,16 +108,17 @@ def sample_task(rng: np.random.Generator, heldout: bool = False) -> TaskSpec:
         kind = rng.choice(["pick", "stack", "next_to"])
         other = OBJECT_PHRASES[OBJECTS[rng.integers(3)]][rng.integers(6)]
         t = TRAIN_TEMPLATES[kind][rng.integers(len(TRAIN_TEMPLATES[kind]))]
-        return TaskSpec("unknown", t.format(a=noun, b=other))
+        return TaskSpec("unknown", t.format(a=noun, b=other), template=t, pa=noun, pb=other)
     if r < 0.11:
         t = temps["home"][rng.integers(len(temps["home"]))]
-        return TaskSpec("home", t)
+        return TaskSpec("home", t, template=t)
     kind = ["pick", "stack", "next_to"][int(rng.integers(3))]
     a, b = rng.choice(OBJECTS, size=2, replace=False)
     pa = OBJECT_PHRASES[a][rng.integers(6)]
     pb = OBJECT_PHRASES[b][rng.integers(6)]
     t = temps[kind][rng.integers(len(temps[kind]))]
-    return TaskSpec(kind, t.format(a=pa, b=pb), str(a), str(b) if kind != "pick" else None)
+    return TaskSpec(kind, t.format(a=pa, b=pb), str(a), str(b) if kind != "pick" else None, template=t, pa=pa,
+                    pb=pb)
 
 
 def sample_layout(rng: np.random.Generator, spec: TaskSpec) -> dict[str, tuple[float, float]]:
@@ -168,6 +188,16 @@ def demo_episode(sim, camera, tok: Tokenizer, spec: TaskSpec, rng: np.random.Gen
         f = encode(tok, spec.text, toks, st["ee"], st["gripper"], st["holding"] is not None)
         f["actions"] = (chunk / ACTION_SCALE).astype(np.float32)
         f["done"] = np.float32(done)
+        # Auxiliary target: where the gripper should be heading right now (subgoal) + gripper target.
+        wp = expert.current_waypoint() if spec.kind != "unknown" and not done else None
+        sub = np.zeros(4, np.float32)
+        if wp is not None:
+            if wp[0] is not None:
+                sub[:3] = np.clip((wp[0] - st["ee"]) / SUBGOAL_SCALE, -3, 3)
+            sub[3] = wp[1]
+        else:
+            sub[3] = 0.0 if st["holding"] else 1.0
+        f["subgoal"] = sub
         f["src"] = _slot(names, spec.src)
         f["dst"] = _slot(names, spec.dst)
         samples.append(f)
@@ -237,6 +267,8 @@ def generate(args: tuple[str, int, int]) -> tuple[dict[str, np.ndarray] | None, 
     out, kept = [], 0
     for _ in range(n):
         spec = sample_task(rng)
+        if rng.random() < 0.3:
+            spec = drop_filler_words(spec, rng)
         noise = 0.004 if rng.random() < 0.5 else 0.0
         ep = demo_episode(sim, cams[int(rng.integers(2))], tok, spec, rng, noise=noise)
         if ep:

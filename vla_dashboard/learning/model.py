@@ -6,7 +6,7 @@
         │                                         │ soft attention weights
         ▼                                         ▼
     task embedding (QUERY)  +  Σ_i P(src=i)·feat_i  +  Σ_i P(dst=i)·feat_i  +  proprio
-        └──────────────────────────► action MLP ──► HORIZON × 7 actions, P(done)
+        └──────────────────────────► action MLP ──► HORIZON × 7 actions, P(done), [subgoal]
 
 The transformer does the language understanding: which words refer to which perceived
 object (word embeddings are shared between instruction tokens and object label tokens,
@@ -34,10 +34,11 @@ def _mlp(i: int, h: int, o: int, layers: int = 2) -> nn.Sequential:
 
 class ActPolicyNet(nn.Module):
     def __init__(self, vocab_size: int, d_model: int = 96, heads: int = 4, layers: int = 2, hidden: int = 256,
-                 dropout: float = 0.05) -> None:
+                 dropout: float = 0.05, aux_dim: int = 0) -> None:
         super().__init__()
         self.cfg = dict(vocab_size=vocab_size, d_model=d_model, heads=heads, layers=layers, hidden=hidden,
-                        dropout=dropout)
+                        dropout=dropout, aux_dim=aux_dim)
+        self.aux_dim = aux_dim  # >0: also predict the current subgoal (training signal only)
         self.word = nn.Embedding(vocab_size, d_model, padding_idx=PAD)
         self.tok_pos = nn.Parameter(torch.zeros(1, MAX_TOKENS, d_model))
         self.kind = nn.Embedding(4, d_model)  # 0 query, 1 text, 2 object, 3 proprio
@@ -50,7 +51,7 @@ class ActPolicyNet(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         self.src_q, self.dst_q = nn.Linear(d_model, d_model), nn.Linear(d_model, d_model)
         self.none_logit = nn.Linear(d_model, 2)  # "no source" / "no destination" scores
-        self.act_mlp = _mlp(d_model + 2 * OBJ_DIM + PROPRIO_DIM, hidden, HORIZON * ACT_DIM + 1, 3)
+        self.act_mlp = _mlp(d_model + 2 * OBJ_DIM + PROPRIO_DIM, hidden, HORIZON * ACT_DIM + 1 + aux_dim, 3)
         nn.init.normal_(self.tok_pos, std=0.02)
         nn.init.normal_(self.query, std=0.02)
 
@@ -78,6 +79,8 @@ class ActPolicyNet(nn.Module):
         f_src = torch.einsum("bk,bkf->bf", w_src, obj_feat)  # soft-selected object features
         f_dst = torch.einsum("bk,bkf->bf", w_dst, obj_feat)
         out = self.act_mlp(torch.cat([hq, f_src, f_dst, proprio], dim=-1))
-        actions = out[:, :-1].view(b, HORIZON, ACT_DIM)
-        done = out[:, -1]
-        return actions, done, src, dst
+        na = HORIZON * ACT_DIM
+        actions = out[:, :na].view(b, HORIZON, ACT_DIM)
+        done = out[:, na]
+        aux = out[:, na + 1:] if self.aux_dim else None
+        return actions, done, src, dst, aux
