@@ -1,0 +1,14 @@
+<!-- @dsCard group="Data" height=266 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Telemetry — preview</title></head>
+<body>
+<div id="root" class="vs-demo vs-demo--col"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h(V.Telemetry, {
+  metrics:[{label:'Control loop',value:'20.0',unit:'Hz',note:'target 20 Hz'},{label:'Perception',value:'6.4',unit:'ms',note:'det every frame'},{label:'Render',value:'14.2',unit:'Hz',tone:'hold',note:'below 20 Hz: CPU mesh'},{label:'P(done)',value:'0.18'}],
+  stages:{render:0.8, perception:0.6, brain:1.1, controller:0.2, overlays:0.9}, budgetMs:50}));
+</script>
+</body>
+</html>

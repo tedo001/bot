@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VLA Robot Dashboard: architecture, methodology, technology</title>
+<!-- Source of overview.png / overview.jpg: open in Chrome at 1920x1080 and screenshot, or render headless at 2x. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --surface: #eef1f4; --raised: #ffffff; --sunken: #f5f7f9; --line: #d3d9e0; --line-strong: #7d8896;
+    --ink: #14181d; --muted: #4f5a66; --drive: #1c4ecd; --drive-soft: #e3ebfd;
+    --estop: #c0392b; --ok: #1e7a43; --ok-soft: #e1f4e8; --busy: #7b3fa0; --busy-soft: #f1e6f8; --hazard: #f5b400;
+    --sans: "IBM Plex Sans", "Segoe UI", sans-serif; --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif; --mono: "IBM Plex Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--surface); -webkit-font-smoothing: antialiased; }
+  .poster { width: 1920px; height: 1080px; padding: 34px 44px 36px; display: grid; grid-template-rows: auto 1fr auto; gap: 16px; overflow: hidden; }
+
+  /* header */
+  .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; }
+  .eyebrow { margin: 0 0 6px; font: 700 13px/16px var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--drive); }
+  h1 { margin: 0; font: 700 44px/48px var(--cond); letter-spacing: -.005em; }
+  .lede { margin: 8px 0 0; max-width: 900px; font-size: 16px; line-height: 23px; color: var(--muted); }
+  .metrics { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .tiles { display: flex; gap: 10px; }
+  .tile { width: 156px; padding: 10px 14px 11px; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; }
+  .tile b { display: block; font: 600 28px/32px var(--mono); letter-spacing: -.02em; }
+  .tile span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted); }
+  .tile.ok b { color: var(--ok); }
+  .tile.drive b { color: var(--drive); }
+  .caption { font-size: 11px; line-height: 14px; color: var(--muted); }
+
+  /* panels */
+  .body { display: grid; grid-template-columns: 1fr 640px; gap: 16px; min-height: 0; }
+  .panel { background: var(--raised); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; min-height: 0; }
+  .ph { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 18px; border-bottom: 1px solid var(--line); flex: none; }
+  .ph .n { width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; background: var(--ink); color: var(--raised); font: 600 13px/1 var(--mono); }
+  .ph h2 { margin: 0; flex: 1; font: 700 15px/18px var(--cond); letter-spacing: .08em; text-transform: uppercase; }
+  .ph .meta { font: 400 12px/16px var(--mono); color: var(--muted); }
+  .pb { padding: 14px 18px; flex: 1; min-height: 0; }
+
+  /* architecture svg */
+  svg { display: block; }
+  .lane { fill: var(--sunken); stroke: var(--line); }
+  .ctr { fill: none; stroke-width: 1.5; stroke-dasharray: 6 5; }
+  .ctr--drive { stroke: var(--drive); }
+  .ctr--busy { stroke: var(--busy); }
+  .lt { font: 700 12px var(--cond); letter-spacing: .08em; }
+  .lt--muted { fill: var(--muted); } .lt--drive { fill: var(--drive); } .lt--busy { fill: var(--busy); }
+  .chip { fill: var(--raised); stroke: var(--line-strong); }
+  .chip--estop { fill: var(--estop); stroke: var(--estop); }
+  .ct { font: 500 13px var(--sans); fill: var(--ink); text-anchor: middle; }
+  .ct--estop { fill: #ffffff; font-weight: 700; }
+  .box { fill: var(--raised); stroke: var(--line-strong); }
+  .box--drive { stroke: var(--drive); stroke-width: 1.5; }
+  .bh--drive { fill: var(--drive-soft); }
+  .bh--estop { fill: var(--estop); }
+  .bh--busy { fill: var(--busy-soft); }
+  .bt { font: 700 15px var(--sans); fill: var(--ink); }
+  .bs { font: 500 11px var(--mono); fill: var(--muted); }
+  .bs--drive { fill: var(--drive); }
+  .bl { font: 400 13px var(--sans); fill: var(--ink); }
+  .dot { fill: var(--line-strong); }
+  .div { stroke: var(--line); }
+  .e { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+  .e--drive { stroke: var(--drive); }
+  .e--busy { stroke: var(--busy); }
+  .halo { fill: none; stroke: var(--raised); stroke-width: 8; }
+  .el { font: 400 12px var(--sans); fill: var(--muted); paint-order: stroke; stroke: var(--raised); stroke-width: 5px; stroke-linejoin: round; }
+  .el--mono { font: 500 11px var(--mono); }
+  .el--drive { fill: var(--drive); } .el--busy { fill: var(--busy); }
+  .ah { fill: var(--muted); } .ah--drive { fill: var(--drive); } .ah--busy { fill: var(--busy); }
+
+  /* methodology */
+  .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+  .step { display: grid; grid-template-columns: 34px 1fr; gap: 0 12px; }
+  .step i { grid-row: span 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 600 14px/1 var(--mono); font-style: normal; background: var(--drive-soft); color: var(--drive); }
+  .step.safe i { background: var(--estop); color: #fff; }
+  .step.learn i { background: var(--busy-soft); color: var(--busy); }
+  .step h3 { margin: 4px 0 2px; font-size: 15px; line-height: 20px; font-weight: 600; }
+  .step p { margin: 0; font-size: 13px; line-height: 19px; color: var(--muted); }
+  .step p b { color: var(--ink); font-weight: 600; }
+
+  /* technology */
+  .tech { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; padding: 12px 0 14px; }
+  .col { padding: 0 18px; border-left: 1px solid var(--line); }
+  .col:first-child { border-left: 0; }
+  .col h3 { margin: 0 0 8px; font: 700 13px/16px var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .c { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; border: 1px solid var(--line-strong); background: var(--sunken); font-size: 12.5px; line-height: 16px; white-space: nowrap; }
+  .c.key { border-color: var(--drive); background: var(--drive-soft); color: var(--drive); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <header class="head">
+    <div>
+      <p class="eyebrow">Autonomous Vision-Language-Action physical system</p>
+      <h1>VLA Robot Dashboard</h1>
+      <p class="lede">Type a task in plain English. The system looks at the table, works out which objects you mean, and a learned policy moves a Yaskawa Motoman GP7 arm to do it, while a safety layer can hold or stop the arm at any moment.</p>
+    </div>
+    <div class="metrics">
+      <div class="tiles">
+        <div class="tile ok"><b>96.7%</b><span>task success, GP7 arm (PyBullet physics)</span></div>
+        <div class="tile ok"><b>93.3%</b><span>same GP7 setup, phrasings never seen in training</span></div>
+        <div class="tile ok"><b>100%</b><span>refuses objects that aren't on the table</span></div>
+        <div class="tile drive"><b>~1 ms</b><span>policy inference per decision, on CPU</span></div>
+        <div class="tile drive"><b>20 Hz</b><span>control loop held while rendering</span></div>
+      </div>
+      <span class="caption">Closed loop, 60 episodes per success figure on new random layouts (shipped model v2). Times measured on CPU.</span>
+    </div>
+  </header>
+
+  <div class="body">
+    <section class="panel">
+      <div class="ph"><span class="n">1</span><h2>Architecture flow</h2><span class="meta">perception → language grounding → action → safety</span></div>
+      <div class="pb">
+        <svg width="1138" height="574" viewBox="0 0 1138 574" role="img" aria-label="Architecture flow diagram">
+          <defs>
+            <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker>
+            <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah--drive"/></marker>
+            <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah--busy"/></marker>
+          </defs>
+
+          <!-- A: operator GUI -->
+          <rect class="lane" x="0.5" y="0.5" width="1137" height="84" rx="8"/>
+          <text class="lt lt--muted" x="16" y="24">OPERATOR · PYQT6 DASHBOARD</text>
+          <rect class="chip" x="16" y="38" width="200" height="30" rx="15"/><text class="ct" x="116" y="58">Plain-English instruction</text>
+          <rect class="chip" x="226" y="38" width="190" height="30" rx="15"/><text class="ct" x="321" y="58">Run · Step · Stop · Reset</text>
+          <rect class="chip chip--estop" x="426" y="38" width="112" height="30" rx="15"/><text class="ct ct--estop" x="482" y="58">E-STOP (Esc)</text>
+          <rect class="chip" x="548" y="38" width="236" height="30" rx="15"/><text class="ct" x="666" y="58">Live camera + SRC/DST overlays</text>
+          <rect class="chip" x="794" y="38" width="160" height="30" rx="15"/><text class="ct" x="874" y="58">Telemetry · console</text>
+          <rect class="chip" x="964" y="38" width="158" height="30" rx="15"/><text class="ct" x="1043" y="58">Train new model</text>
+
+          <!-- A <-> B -->
+          <path class="e" d="M150 124V88" marker-end="url(#a)"/>
+          <text class="el" x="160" y="110">camera frames + robot state · 10 Hz</text>
+          <path class="e e--drive" d="M714 86V158" marker-end="url(#ad)"/>
+          <text class="el el--drive" x="724" y="110">instruction → validated InstructionPayload</text>
+
+          <!-- B: control loop -->
+          <rect class="ctr ctr--drive" x="0.75" y="124" width="1136.5" height="258" rx="10"/>
+          <text class="lt lt--drive" x="1122" y="146" text-anchor="end">CONTROL LOOP · 20 HZ, DEADLINE-SCHEDULED</text>
+
+          <rect class="box" x="16" y="160" width="236" height="158" rx="8"/>
+          <text class="bt" x="30" y="184">Simulator</text><text class="bs" x="30" y="202">MuJoCo · PyBullet · 2D</text>
+          <line class="div" x1="16" y1="214" x2="252" y2="214"/>
+          <circle class="dot" cx="33" cy="231" r="2.5"/><text class="bl" x="42" y="236">Yaskawa GP7/GP8, vendor CAD</text>
+          <circle class="dot" cx="33" cy="253" r="2.5"/><text class="bl" x="42" y="258">physics, IK, real grasping</text>
+          <circle class="dot" cx="33" cy="275" r="2.5"/><text class="bl" x="42" y="280">renders in its own process</text>
+          <circle class="dot" cx="33" cy="297" r="2.5"/><text class="bl" x="42" y="302">zero-copy shared-memory frames</text>
+
+          <rect class="box" x="306" y="160" width="236" height="158" rx="8"/>
+          <text class="bt" x="320" y="184">Perception</text><text class="bs" x="320" y="202">own thread · strided models</text>
+          <line class="div" x1="306" y1="214" x2="542" y2="214"/>
+          <circle class="dot" cx="323" cy="231" r="2.5"/><text class="bl" x="332" y="236">RT-DETR: objects + people</text>
+          <circle class="dot" cx="323" cy="253" r="2.5"/><text class="bl" x="332" y="258">RF-DETR: instance masks</text>
+          <circle class="dot" cx="323" cy="275" r="2.5"/><text class="bl" x="332" y="280">PaddleOCR: printed labels</text>
+          <circle class="dot" cx="323" cy="297" r="2.5"/><text class="bl" x="332" y="302">2D → 3D scene index, O(1)</text>
+
+          <rect class="box box--drive" x="596" y="160" width="236" height="158" rx="8"/>
+          <path class="bh--drive" d="M604 160.75h220a7.25 7.25 0 0 1 7.25 7.25v46h-234.5v-46a7.25 7.25 0 0 1 7.25-7.25z"/>
+          <text class="bt" x="610" y="184">Learned policy</text><text class="bs bs--drive" x="610" y="202">default brain · ~1 ms CPU</text>
+          <line class="div" x1="596" y1="214" x2="832" y2="214"/>
+          <circle class="dot" cx="613" cy="231" r="2.5"/><text class="bl" x="622" y="236">language-conditioned transformer</text>
+          <circle class="dot" cx="613" cy="253" r="2.5"/><text class="bl" x="622" y="258">picks source + destination</text>
+          <circle class="dot" cx="613" cy="275" r="2.5"/><text class="bl" x="622" y="280">next 8 actions + P(done)</text>
+          <circle class="dot" cx="613" cy="297" r="2.5"/><text class="bl" x="622" y="302">or: OpenVLA · openpi π₀</text>
+
+          <rect class="box" x="886" y="160" width="236" height="158" rx="8"/>
+          <path class="bh--estop" d="M894 160.5h220a7.5 7.5 0 0 1 7.5 7.5v2h-235v-2a7.5 7.5 0 0 1 7.5-7.5z"/>
+          <text class="bt" x="900" y="184">Robot controller</text><text class="bs" x="900" y="202">the only writer to the arm</text>
+          <line class="div" x1="886" y1="214" x2="1122" y2="214"/>
+          <circle class="dot" cx="903" cy="231" r="2.5"/><text class="bl" x="912" y="236">E-STOP latch, operator-owned</text>
+          <circle class="dot" cx="903" cy="253" r="2.5"/><text class="bl" x="912" y="258">safety hold: person in view</text>
+          <circle class="dot" cx="903" cy="275" r="2.5"/><text class="bl" x="912" y="280">watchdog 0.5 s, timeout 2 s</text>
+          <circle class="dot" cx="903" cy="297" r="2.5"/><text class="bl" x="912" y="302">per-tick rate + range limits</text>
+
+          <path class="e" d="M252 239H304" marker-end="url(#a)"/><text class="el el--mono" x="279" y="231" text-anchor="middle">frame</text>
+          <path class="e" d="M542 239H594" marker-end="url(#a)"/><text class="el el--mono" x="569" y="231" text-anchor="middle">objects</text>
+          <path class="e" d="M832 239H884" marker-end="url(#a)"/><text class="el el--mono" x="859" y="231" text-anchor="middle">actions</text>
+          <path class="e" d="M1004 318V346q0 4-4 4H138q-4 0-4-4V320" marker-end="url(#a)"/>
+          <text class="el" x="420" y="371" text-anchor="middle">joint commands every tick → physics step → next camera frame</text>
+
+          <!-- C: learning pipeline -->
+          <rect class="ctr ctr--busy" x="0.75" y="410" width="1136.5" height="162" rx="10"/>
+          <text class="lt lt--busy" x="16" y="432">LEARNING PIPELINE · SEPARATE PROCESS, THE ROBOT KEEPS RUNNING</text>
+
+          <rect class="box" x="16" y="444" width="236" height="114" rx="8"/>
+          <text class="bt" x="30" y="466">Teacher demos</text><text class="bs" x="30" y="484">OK-Robot rule planner</text>
+          <circle class="dot" cx="33" cy="501" r="2.5"/><text class="bl" x="42" y="506">random layouts every episode</text>
+          <circle class="dot" cx="33" cy="522" r="2.5"/><text class="bl" x="42" y="527">varied phrasing + action noise</text>
+          <circle class="dot" cx="33" cy="543" r="2.5"/><text class="bl" x="42" y="548">"the banana" → do nothing</text>
+
+          <rect class="box" x="306" y="444" width="236" height="114" rx="8"/>
+          <text class="bt" x="320" y="466">Behaviour cloning</text><text class="bs" x="320" y="484">PyTorch · imitation learning</text>
+          <circle class="dot" cx="323" cy="501" r="2.5"/><text class="bl" x="332" y="506">L1 loss on 8-step chunks</text>
+          <circle class="dot" cx="323" cy="522" r="2.5"/><text class="bl" x="332" y="527">+ done and grounding heads</text>
+          <circle class="dot" cx="323" cy="543" r="2.5"/><text class="bl" x="332" y="548">word dropout for new verbs</text>
+
+          <rect class="box" x="596" y="444" width="236" height="114" rx="8"/>
+          <text class="bt" x="610" y="466">Closed-loop evaluation</text><text class="bs" x="610" y="484">unseen layouts and wording</text>
+          <circle class="dot" cx="613" cy="501" r="2.5"/><text class="bl" x="622" y="506">both physics simulators</text>
+          <circle class="dot" cx="613" cy="522" r="2.5"/><text class="bl" x="622" y="527">full camera → policy path</text>
+          <circle class="dot" cx="613" cy="543" r="2.5"/><text class="bl" x="622" y="548">success rate per task type</text>
+
+          <rect class="box" x="886" y="444" width="236" height="114" rx="8"/>
+          <text class="bt" x="900" y="466">Checkpoint</text><text class="bs" x="900" y="484">vla_act.pt + metrics JSON</text>
+          <circle class="dot" cx="903" cy="501" r="2.5"/><text class="bl" x="912" y="506">listed with its test scores</text>
+          <circle class="dot" cx="903" cy="522" r="2.5"/><text class="bl" x="912" y="527">switched in between ticks</text>
+          <circle class="dot" cx="903" cy="543" r="2.5"/><text class="bl" x="912" y="548">no restart, no downtime</text>
+
+          <path class="e e--busy" d="M252 501H304" marker-end="url(#ab)"/>
+          <path class="e e--busy" d="M542 501H594" marker-end="url(#ab)"/>
+          <path class="e e--busy" d="M832 501H884" marker-end="url(#ab)"/>
+          <!-- checkpoint -> policy, crossing the loop-back with a gap -->
+          <path class="halo" d="M760 342V358"/>
+          <path class="e e--busy" d="M930 444V400q0-4-4-4H764q-4 0-4-4V320" marker-end="url(#ab)"/>
+          <text class="el el--busy" x="940" y="436">switch in new model</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="ph"><span class="n">2</span><h2>Methodology</h2><span class="meta">imitation learning, closed loop</span></div>
+      <div class="pb">
+        <ol class="steps">
+          <li class="step"><i>1</i><h3>Build the work cell in simulation</h3><p>A <b>Yaskawa Motoman GP7</b> built from the vendor's CAD meshes and kinematics runs on <b>MuJoCo or PyBullet</b> with real physics, inverse kinematics and grasping. One calibrated camera model is shared by the renderer and perception.</p></li>
+          <li class="step"><i>2</i><h3>See and understand the scene</h3><p><b>RT-DETR</b> finds objects and people, <b>RF-DETR</b> segments them and <b>PaddleOCR</b> reads their labels. Labels are matched to detections and lifted to 3D, so the instruction's words map straight to positions.</p></li>
+          <li class="step learn"><i>3</i><h3>Generate expert demonstrations</h3><p>A rule-based planner is told each task directly and runs <b>thousands of episodes</b>: random layouts, varied phrasing, injected noise so the student learns to recover, and requests for absent objects whose right answer is to do nothing.</p></li>
+          <li class="step learn"><i>4</i><h3>Learn the policy by imitation</h3><p>A small <b>language-conditioned transformer</b> (2 layers, d = 96) learns from those demonstrations to point at the source and destination objects and output the <b>next 8 actions</b> and the probability the task is done.</p></li>
+          <li class="step learn"><i>5</i><h3>Evaluate in closed loop</h3><p>The trained model drives the arm on <b>new layouts and unseen phrasings</b> in both simulators, through the full camera → perception → policy path, and its scores are saved with the checkpoint.</p></li>
+          <li class="step safe"><i>6</i><h3>Run it safely</h3><p>The policy re-plans every 2 ticks of a <b>20 Hz loop</b> and stops after two done predictions. A single controller enforces <b>E-STOP, person-in-view hold, watchdog and rate limits</b>; every message is schema-validated.</p></li>
+        </ol>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="ph"><span class="n">3</span><h2>Technology used</h2><span class="meta">open-source, permissive licences · runs on CPU</span></div>
+    <div class="tech">
+      <div class="col"><h3>Simulation &amp; robot</h3><div class="chips"><span class="c key">MuJoCo 3</span><span class="c key">PyBullet</span><span class="c">Yaskawa GP7/GP8 (ROS-Industrial CAD)</span><span class="c">EGL GPU rendering (optional)</span></div></div>
+      <div class="col"><h3>Vision &amp; perception</h3><div class="chips"><span class="c key">RT-DETR</span><span class="c key">RF-DETR</span><span class="c key">PaddleOCR</span><span class="c">Hugging Face Transformers</span><span class="c">OpenCV</span></div></div>
+      <div class="col"><h3>AI &amp; learning</h3><div class="chips"><span class="c key">PyTorch</span><span class="c">Transformer + ACT-style chunking</span><span class="c">Behaviour cloning + DART</span><span class="c">OpenVLA · openpi π₀ clients</span></div></div>
+      <div class="col"><h3>Software &amp; runtime</h3><div class="chips"><span class="c key">Python 3.10+</span><span class="c key">PyQt6</span><span class="c">Pydantic v2</span><span class="c">NumPy</span><span class="c">Shared-memory multiprocessing</span><span class="c">pytest</span></div></div>
+      <div class="col"><h3>Platform &amp; deployment</h3><div class="chips"><span class="c key">Ubuntu</span><span class="c key">Windows</span><span class="c">CPU-only by default</span><span class="c">GPU optional</span><span class="c">home-robot action adapter</span><span class="c">No AGPL code</span></div></div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

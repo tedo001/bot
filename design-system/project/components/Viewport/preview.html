@@ -1,0 +1,14 @@
+<!-- @dsCard group="Workcell" height=476 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Viewport — preview</title></head>
+<body>
+<div id="root" class="vs-demo vs-demo--col"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+var objs = [{id:'cube',label:'red cube',shape:'cube',x:-0.35,y:0.45,mark:'src',score:0.98,mask:true},{id:'cyl',label:'blue cylinder',shape:'cylinder',x:0.0,y:0.45,mark:'dst',score:0.97,mask:true},{id:'sph',label:'green ball',shape:'sphere',x:0.35,y:0.45,score:0.95,mask:true}];
+ReactDOM.createRoot(document.getElementById('root')).render(h(V.Viewport, {objects:objs, height:440, overlays:{boxes:true, masks:true, skeleton:true, ocr:true, hud:true}, hud:'loop 20.0 Hz · perception 6.4 ms · det 3.1 · seg 9.8 · ocr cached · display 30 fps', tcp:[-0.35,0.45,0.16],
+  toolbar:h(V.Segmented,{size:'sm',label:'View',defaultValue:'3d',options:[{value:'3d',label:'3D'},{value:'cam',label:'Camera'},{value:'split',label:'Split'}]})}));
+</script>
+</body>
+</html>

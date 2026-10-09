@@ -1,0 +1,19 @@
+<!-- @dsCard group="Actions" height=120 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Button — preview</title></head>
+<body>
+<div id="root" class="vs-demo"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+  h(V.Button, {variant:'primary', icon:'play', kbd:'Ctrl+↵'}, 'Run simulation'),
+  h(V.Button, {icon:'reset'}, 'Reset scene'),
+  h(V.Button, {variant:'quiet', icon:'home'}, 'Go home'),
+  h(V.Button, {variant:'danger'}, 'Delete model'),
+  h(V.Button, {variant:'primary', disabled:true, title:'Models still loading'}, 'Run simulation'),
+  h(V.Button, {size:'sm', icon:'target'}, 'Record pose'),
+  h(V.Button, {icon:'sliders', 'aria-label':'Settings', title:'Settings'})));
+</script>
+</body>
+</html>

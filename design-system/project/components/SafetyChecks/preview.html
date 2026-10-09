@@ -1,0 +1,21 @@
+<!-- @dsCard group="Status & safety" height=400 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>SafetyChecks — preview</title></head>
+<body>
+<div id="root" class="vs-demo vs-demo--col"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h(V.SafetyChecks, {checks:[
+  {name:'Joint position check', detail:'S L U R B T inside vendor limits', value:'6/6', state:'ok'},
+  {name:'Joint speed check', detail:'per-tick rate limit', value:'≤ 6.0 rad/s', state:'ok'},
+  {name:'Cartesian position check', detail:'TCP inside the table zone', value:'Zone 1', state:'changed'},
+  {name:'Stop position prediction', detail:'stopping distance at current speed', value:'38 mm', state:'ok'},
+  {name:'Person-in-view hold', detail:'RT-DETR every frame', value:'stride 1', state:'ok'},
+  {name:'Watchdog', detail:'hold if no fresh command', value:'0.50 s', state:'ok'},
+  {name:'Inference timeout', detail:'hold if the policy is late', value:'2.00 s', state:'ok'},
+  {name:'Collision detection', detail:'robot vs table and objects', value:'on', state:'fault'}
+], selected:2}));
+</script>
+</body>
+</html>

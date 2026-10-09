@@ -1,0 +1,26 @@
+<!-- @dsCard group="Workcell" height=350 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>CellTree — preview</title></head>
+<body>
+<div id="root" class="vs-demo vs-demo--col"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div',{style:{width:300}}, h(V.CellTree, {nodes:[
+  {id:'ctrl', label:'Robot controller 1', icon:'robot', meta:'GP7', children:[
+    {id:'gp7', label:'Motoman GP7', icon:'robot', meta:'MuJoCo', children:[
+      {id:'tool', label:'Tool frame 1 · gripper TCP', icon:'axes'},
+      {id:'user', label:'User frame 1 · table', icon:'axes'},
+      {id:'grip', label:'Parallel gripper', icon:'gripper', meta:'0.80'}]}]},
+  {id:'objs', label:'Objects', icon:'cube', children:[
+    {id:'cube', label:'Red cube', icon:'cube', badge:'src'},
+    {id:'cyl', label:'Blue cylinder', icon:'cube', badge:'dst'},
+    {id:'sph', label:'Green ball', icon:'cube'}]},
+  {id:'cams', label:'Cameras', icon:'camera', children:[
+    {id:'cam0', label:'Overhead RGB · 640×480', icon:'camera'},
+    {id:'cam1', label:'Wrist camera', icon:'camera', hidden:true}]},
+  {id:'table', label:'Table', icon:'layers', locked:true}
+], defaultSelected:'cube'})));
+</script>
+</body>
+</html>

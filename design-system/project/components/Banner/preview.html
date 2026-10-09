@@ -1,0 +1,15 @@
+<!-- @dsCard group="Status & safety" height=180 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Banner — preview</title></head>
+<body>
+<div id="root" class="vs-demo vs-demo--col"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+  h(V.Banner, {kind:'estop', title:'E-STOP', message:'All motion held. Release to continue.', action:{label:'Release'}}),
+  h(V.Banner, {kind:'hold', title:'Safety hold', message:'Person in view (RT-DETR 0.91). Motion resumes when the cell is clear.'}),
+  h(V.Banner, {kind:'info', icon:'policy', title:'Switching model', message:'policy_quick_20261005_1204.pt is loading. The robot keeps its current brain until it is ready.'})));
+</script>
+</body>
+</html>

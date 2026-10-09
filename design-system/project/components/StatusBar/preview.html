@@ -1,0 +1,15 @@
+<!-- @dsCard group="Shell" height=80 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>StatusBar — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div',{style:{padding:'16px 0'}}, h(V.StatusBar, {status:'running', items:[
+  {icon:'robot',label:'Controller',value:'GP7 · MuJoCo'},{icon:'program',label:'Program',value:'SORT_CUBE line 4'},
+  {icon:'policy',label:'Driving',value:'trained model vla_act.pt',tone:'ok'},
+  {icon:'chart',value:'20.0 Hz',push:true},{label:'Speed',value:'100%'},{icon:'shield',label:'Safety',value:'a3f9c2'}]})));
+</script>
+</body>
+</html>

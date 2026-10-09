@@ -1,0 +1,16 @@
+<!-- @dsCard group="Shell" height=220 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Panel — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,padding:16}},
+  h(V.Panel, {title:'Telemetry', icon:'chart', meta:'10 Hz', collapsible:true, actions:h(V.Button,{variant:'quiet',size:'sm',icon:'sliders','aria-label':'Settings'})},
+    h(V.PoseReadout,{pose:{x:0.05,y:0.55,z:0.30,w:180,p:0,r:90}})),
+  h(V.Panel, {title:'Jog pendant', icon:'jog', floating:true, footer:h('span',{className:'vs-field-label'},'Deadman: Space')},
+    h('p',{style:{margin:0,color:'var(--ink-muted)',fontSize:13}},'Floating windows sit over the viewport and are the only panels with a shadow.'))));
+</script>
+</body>
+</html>

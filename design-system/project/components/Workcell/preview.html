@@ -1,0 +1,84 @@
+<!-- @dsCard group="Pages" height=800 width=1280 page subtitle="Run workspace, assembled from the components" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Workcell — page</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  .studio { width: 1280px; height: 800px; display: grid; grid-template-rows: var(--ribbon-height) auto 1fr var(--statusbar-height); background: var(--surface); overflow: hidden; }
+  .studio__main { display: grid; grid-template-columns: 272px 1fr 320px; gap: var(--space-2); padding: var(--space-2); min-height: 0; }
+  .studio__col { display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; }
+  .studio__centre { display: grid; grid-template-rows: 1fr 168px; gap: var(--space-2); min-height: 0; }
+  .studio__centre .vs-vp { height: 100%; }
+  .studio .vs-panel__body { overflow: hidden; }
+  .studio .grow > .vs-panel__body { overflow: auto; }
+  .jogfloat { position: absolute; left: var(--space-3); top: 64px; width: 248px; }
+  .jogfloat .vs-panel__body { padding: var(--space-2) var(--space-3); }
+  .grow { flex: 1; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+var nodes = [
+  {id:'ctrl', label:'Robot controller 1', icon:'robot', meta:'GP7', children:[
+    {id:'gp7', label:'Motoman GP7', icon:'robot', meta:'MuJoCo', children:[
+      {id:'tool', label:'Tool frame 1 · TCP', icon:'axes'},
+      {id:'user', label:'User frame 1 · table', icon:'axes'},
+      {id:'grip', label:'Parallel gripper', icon:'gripper', meta:'0.00'}]}]},
+  {id:'objs', label:'Objects', icon:'cube', children:[
+    {id:'cube', label:'Red cube', icon:'cube', badge:'src'},
+    {id:'cyl', label:'Blue cylinder', icon:'cube', badge:'dst'},
+    {id:'sph', label:'Green ball', icon:'cube'}]},
+  {id:'cams', label:'Cameras', icon:'camera', children:[{id:'cam0', label:'Overhead RGB', icon:'camera'}]},
+  {id:'table', label:'Table', icon:'layers', locked:true}];
+var objs = [{id:'cube',label:'red cube',shape:'cube',x:-0.35,y:0.45,mark:'src',score:0.98,mask:true},{id:'cyl',label:'blue cylinder',shape:'cylinder',x:0.0,y:0.45,mark:'dst',score:0.97,mask:true},{id:'sph',label:'green ball',shape:'sphere',x:0.35,y:0.45,score:0.95,mask:true}];
+var phases = [{name:'Perceive',detail:'3 objects'},{name:'Ground',detail:'cube → cylinder'},{name:'Approach'},{name:'Grasp'},{name:'Lift'},{name:'Move'},{name:'Place'},{name:'Release'},{name:'Retreat'}];
+var log = [
+  {t:'12:04:30.102',level:'INFO',src:'app',msg:'models ready; starting camera stream + control loop at 20 Hz'},
+  {t:'12:04:31.208',level:'INFO',src:'engine',msg:'RUN [a91f03c2] Put the red cube on the blue cylinder'},
+  {t:'12:04:31.260',level:'INFO',src:'brain',msg:'learned policy: SRC cube (0.98) → DST cylinder (0.96)'},
+  {t:'12:04:33.640',level:'WARN',src:'controller',msg:'watchdog: no command for 0.52s, holding'},
+  {t:'12:04:33.702',level:'INFO',src:'controller',msg:'watchdog clear, resuming'}];
+
+function App() {
+  var es = React.useState(false), engaged = es[0];
+  var status = engaged ? 'stopped' : 'running';
+  return h('div', {className:'studio'},
+    h(V.Ribbon, {active:'run', meta:'tabletop_sort.cell · saved',
+      tabs:[{id:'cell',label:'Workcell',icon:'layers'},{id:'prog',label:'Program',icon:'program'},{id:'run',label:'Run',icon:'play'},{id:'safety',label:'Safety',icon:'shield'},{id:'train',label:'Train',icon:'train'},{id:'diag',label:'Diagnostics',icon:'chart'}],
+      groups:[{label:'Episode',tools:[{icon:'play',label:'Run',primary:true,disabled:true,title:engaged?'Release E-STOP to run':'Episode running'},{icon:'step',label:'Step',disabled:true},{icon:'pause',label:'Pause',disabled:engaged},{icon:'stop',label:'Stop',disabled:engaged},{icon:'reset',label:'Reset',disabled:!engaged}]},
+              {label:'View',tools:[{icon:'cube',label:'3D'},{icon:'camera',label:'Camera'},{icon:'layers',label:'Split'},{icon:'eye',label:'Overlays'}]},
+              {label:'Robot',tools:[{icon:'jog',label:'Jog',disabled:true},{icon:'home',label:'Home',disabled:true}]},
+              {label:'Record',tools:[{icon:'terminal',label:'Episodes'},{icon:'camera',label:'Snapshot'}]}],
+      right:h(React.Fragment,null,h(V.StatusPill,{status:status,size:'lg'}),h(V.EStop,{compact:true,engaged:engaged,onChange:es[1]}))}),
+    engaged ? h(V.Banner,{kind:'estop',title:'E-STOP',message:'All motion held. The episode was stopped. Release to continue.',action:{label:'Release',onClick:function(){es[1](false);}}}) : h('div'),
+    h('div', {className:'studio__main'},
+      h('div', {className:'studio__col'},
+        h(V.Panel, {title:'Cell browser', icon:'layers', meta:'9 items', flush:true, className:'grow'}, h('div',{style:{padding:'4px'}}, h(V.CellTree,{nodes:nodes, defaultSelected:'cube'}))),
+        h(V.Panel, {title:'Properties', icon:'sliders'}, h(V.PropertyInspector,{title:'Red cube', subtitle:'Objects', icon:'cube', sections:[
+          {title:'Location', columns:3, fields:[{label:'X',value:'-220.0',unit:'mm',kind:'number',axis:'x'},{label:'Y',value:'460.0',unit:'mm',kind:'number',axis:'y'},{label:'Z',value:'25.0',unit:'mm',kind:'number',axis:'z'}]},
+          {title:'Behaviour', fields:[{label:'Collision detection',value:true,kind:'toggle'}]}]}))),
+      h('div', {className:'studio__centre'},
+        h(V.Viewport, {objects:objs, overlays:{boxes:true,masks:true,skeleton:true,ocr:true,hud:true}, tcp:[-0.35,0.45,0.16],
+          hud:'loop 20.0 Hz · perception 6.4 ms · det 3.1 · seg 9.8 · ocr cached · display 30 fps',
+          toolbar:h(V.Segmented,{size:'sm',label:'View',defaultValue:'3d',options:[{value:'3d',label:'3D'},{value:'cam',label:'Camera'},{value:'split',label:'Split'}]})}),
+        h(V.Console, {lines:log, height:128})),
+      h('div', {className:'studio__col'},
+        h(V.Panel, {title:'Instruction', icon:'program'},
+          h('div',{style:{display:'flex',flexDirection:'column',gap:12}},
+            h(V.InstructionBox,{defaultValue:'Put the red cube on the blue cylinder', rows:2}),
+            h(V.RunControls,{status:status, disabledReason:engaged?'Release E-STOP to run':undefined}))),
+        h(V.Panel, {title:'Task plan', icon:'target', meta:'chunk 7 · 8 actions', className:'grow'},
+          h(V.TaskPlan,{phases:phases, current:engaged?3:4, status:engaged?'hold':'running', source:'red cube', destination:'blue cylinder', doneProb:0.31})),
+        h(V.Panel, {title:'Telemetry', icon:'chart', meta:'20.0 Hz · 3.6 / 50 ms', collapsible:true, defaultOpen:false},
+          h(V.Telemetry,{metrics:[{label:'Loop',value:'20.0',unit:'Hz'},{label:'Perception',value:'6.4',unit:'ms'}], stages:{render:0.8,perception:0.6,brain:1.1,controller:0.2,overlays:0.9}, budgetMs:50})))),
+    h(V.StatusBar, {status:status, items:[
+      {icon:'robot',label:'Controller',value:'GP7 · MuJoCo'},{icon:'program',label:'Instruction',value:'a91f03c2'},
+      {icon:'policy',label:'Driving',value:'trained model vla_act.pt',tone:'ok'},
+      {icon:'chart',value:'20.0 Hz',push:true},{label:'Speed',value:'100%'},{icon:'shield',label:'Safety',value:'a3f9c2 · OK',tone:'ok'}]}));
+}
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>
+</body>
+</html>

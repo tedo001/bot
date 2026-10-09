@@ -1,0 +1,18 @@
+<!-- @dsCard group="Actions" height=150 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Toggle — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 24px',padding:16}},
+  h(V.Toggle, {label:'Boxes + 3D position', hint:'RT-DETR / RF-DETR', defaultChecked:true}),
+  h(V.Toggle, {label:'Segmentation masks', hint:'RF-DETR', defaultChecked:true}),
+  h(V.Toggle, {label:'Skeleton view', hint:'objects + robot', defaultChecked:true}),
+  h(V.Toggle, {label:'OCR labels', hint:'PaddleOCR'}),
+  h(V.Toggle, {label:'HUD / latency', defaultChecked:true}),
+  h(V.Toggle, {label:'Collision detection', hint:'locked by safety config', disabled:true, defaultChecked:true})));
+</script>
+</body>
+</html>

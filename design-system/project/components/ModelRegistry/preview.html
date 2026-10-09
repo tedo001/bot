@@ -1,0 +1,15 @@
+<!-- @dsCard group="Brain" height=210 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ModelRegistry — preview</title></head>
+<body>
+<div id="root" class="vs-demo vs-demo--col"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h(V.ModelRegistry, {selected:'policy_quick_20261005_1204.pt', onActivate:function(){}, models:[
+  {name:'Shipped model (v2)', file:'vla_act.pt', sim:0.983, pybullet:0.967, mujoco:0.85, driving:true},
+  {name:'Quick run', file:'policy_quick_20261005_1204.pt', trained:'5 Oct 12:04', sim:0.95, pybullet:0.883, mujoco:null},
+  {name:'Full run', file:'policy_full_20261004_1730.pt', trained:'4 Oct 17:30', sim:0.983, pybullet:0.95, mujoco:0.9}]}));
+</script>
+</body>
+</html>

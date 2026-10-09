@@ -1,0 +1,14 @@
+<!-- @dsCard group="Program" height=380 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>TaskPlan — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,padding:16}},
+  h(V.TaskPlan, {phases:[{name:'Perceive',detail:'3 objects'},{name:'Ground',detail:'cube → cylinder'},{name:'Approach',detail:'z 0.12 m'},{name:'Grasp',detail:'grip 0.00'},{name:'Lift'},{name:'Move'},{name:'Place'},{name:'Release'},{name:'Retreat'}], current:4, source:'red cube', destination:'blue cylinder', doneProb:0.18}),
+  h(V.TaskPlan, {phases:[{name:'Perceive',detail:'3 objects'},{name:'Ground',detail:'cube → cylinder'},{name:'Approach',detail:'z 0.12 m'},{name:'Grasp',detail:'grip 0.00'},{name:'Lift'},{name:'Move'},{name:'Place'},{name:'Release'},{name:'Retreat'}], current:1, status:'failed', source:null, destination:null, message:'No object matches "banana". Name an object in the scene, e.g. "the red cube".'})));
+</script>
+</body>
+</html>

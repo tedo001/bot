@@ -1,0 +1,21 @@
+<!-- @dsCard group="Program" height=330 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ProgramList — preview</title></head>
+<body>
+<div id="root" class="vs-demo vs-demo--col"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+var lines = [
+  {op:'', kind:'comment', text:'! sort the red cube onto the cylinder'},
+  {op:'MoveJ', kind:'motion', text:'P[1:home] 50% FINE'},
+  {op:'Detect', kind:'detect', text:"'red cube', 'blue cylinder'"},
+  {op:'Run', kind:'language', text:'"Put the red cube on the blue cylinder"'},
+  {op:'Wait', kind:'wait', text:'0.5 s'},
+  {op:'MoveL', kind:'motion', text:'P[2:clear] 250 mm/s CNT50'},
+  {op:'Grip', kind:'gripper', text:'open'},
+  {op:'MoveJ', kind:'motion', text:'P[1:home] 50% FINE'}];
+ReactDOM.createRoot(document.getElementById('root')).render(h(V.ProgramList, {name:'SORT_CUBE', lines:lines, current:3, status:'running', palette:true}));
+</script>
+</body>
+</html>

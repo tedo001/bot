@@ -1,0 +1,19 @@
+<!-- @dsCard group="Data" height=230 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Console — preview</title></head>
+<body>
+<div id="root" class="vs-demo vs-demo--col"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h(V.Console, {lines:[
+  {t:'12:04:28.913',level:'INFO',src:'app',msg:'loading perception + learned brain in background…'},
+  {t:'12:04:30.102',level:'INFO',src:'app',msg:'models ready; starting camera stream + control loop at 20 Hz'},
+  {t:'12:04:31.208',level:'INFO',src:'engine',msg:'RUN [a91f03c2] Put the red cube on the blue cylinder'},
+  {t:'12:04:33.640',level:'WARN',src:'controller',msg:'watchdog: no command for 0.52s, holding'},
+  {t:'12:04:36.017',level:'INFO',src:'engine',msg:'episode succeeded: cube on cylinder (4.8 s)'},
+  {t:'12:05:02.554',level:'ERROR',src:'brain',msg:'episode failed: no object matches "banana". Name an object in the scene.'}
+], height:150}));
+</script>
+</body>
+</html>

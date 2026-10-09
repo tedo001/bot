@@ -1,0 +1,14 @@
+<!-- @dsCard group="Robot" height=520 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>JogPanel — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,padding:16}},
+  h(V.JogPanel, {deadman:true}),
+  h(V.JogPanel, {defaultFrame:'world', disabledReason:'Jog is off while RUNNING. Stop the episode to jog.'})));
+</script>
+</body>
+</html>

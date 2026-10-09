@@ -1,0 +1,233 @@
+{
+ "v": 3,
+ "layout": "files",
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-09T09:58:09Z"
+ },
+ "title": "VLA Robot Studio",
+ "namespace": "VLAStudio",
+ "libraries": [
+  {
+   "name": "react",
+   "version": "18"
+  },
+  {
+   "name": "react-dom",
+   "version": "18"
+  }
+ ],
+ "sections": {},
+ "groups": [
+  "Icons"
+ ],
+ "assetGroups": {
+  "Icons": {
+   "name": "Icons",
+   "tile": "xs",
+   "order": [
+    "play.svg",
+    "pause.svg",
+    "stop.svg",
+    "step.svg",
+    "reset.svg",
+    "home.svg",
+    "estop.svg",
+    "robot.svg",
+    "gripper.svg",
+    "jog.svg",
+    "axes.svg",
+    "cube.svg",
+    "target.svg",
+    "camera.svg",
+    "eye.svg",
+    "layers.svg",
+    "program.svg",
+    "shield.svg",
+    "policy.svg",
+    "train.svg",
+    "chart.svg",
+    "terminal.svg",
+    "sliders.svg",
+    "warning.svg",
+    "check.svg",
+    "lock.svg",
+    "chevron.svg"
+   ],
+   "files": {
+    "play.svg": {
+     "name": "play.svg",
+     "blob": "29e5fa682808bc9f3daf80604400eec5",
+     "size": 219,
+     "type": "image/svg+xml"
+    },
+    "pause.svg": {
+     "name": "pause.svg",
+     "blob": "de76fc9a78a424c8bd619426d3e98191",
+     "size": 213,
+     "type": "image/svg+xml"
+    },
+    "stop.svg": {
+     "name": "stop.svg",
+     "blob": "e0ed7fabe8ff8daf3010d6e8e3b376af",
+     "size": 211,
+     "type": "image/svg+xml"
+    },
+    "step.svg": {
+     "name": "step.svg",
+     "blob": "041f829fe89660bf64b03940fa82077a",
+     "size": 219,
+     "type": "image/svg+xml"
+    },
+    "reset.svg": {
+     "name": "reset.svg",
+     "blob": "ca2f6393ee975d3fedadd1b329ce1ca4",
+     "size": 239,
+     "type": "image/svg+xml"
+    },
+    "home.svg": {
+     "name": "home.svg",
+     "blob": "d39c7023b95a315aa00ad490d27787a6",
+     "size": 247,
+     "type": "image/svg+xml"
+    },
+    "estop.svg": {
+     "name": "estop.svg",
+     "blob": "97a9bcc336e6c813f03aa9af7e4494a4",
+     "size": 250,
+     "type": "image/svg+xml"
+    },
+    "robot.svg": {
+     "name": "robot.svg",
+     "blob": "26b973cf569bdcbe17a6f6df77ee710f",
+     "size": 383,
+     "type": "image/svg+xml"
+    },
+    "gripper.svg": {
+     "name": "gripper.svg",
+     "blob": "65abc7df56afeb3ac72d1f66393fbacb",
+     "size": 244,
+     "type": "image/svg+xml"
+    },
+    "jog.svg": {
+     "name": "jog.svg",
+     "blob": "a65fbd8aab257b29a4f020ce00746979",
+     "size": 265,
+     "type": "image/svg+xml"
+    },
+    "axes.svg": {
+     "name": "axes.svg",
+     "blob": "20a575bdd7120ae61537356ebec891da",
+     "size": 248,
+     "type": "image/svg+xml"
+    },
+    "cube.svg": {
+     "name": "cube.svg",
+     "blob": "9ca8a06467fa974cf20c33e22c33715e",
+     "size": 260,
+     "type": "image/svg+xml"
+    },
+    "target.svg": {
+     "name": "target.svg",
+     "blob": "87fcdb4f95173d6e985ea594bec1718e",
+     "size": 308,
+     "type": "image/svg+xml"
+    },
+    "camera.svg": {
+     "name": "camera.svg",
+     "blob": "0a2f4d9473050b03d718ce8253074bb3",
+     "size": 271,
+     "type": "image/svg+xml"
+    },
+    "eye.svg": {
+     "name": "eye.svg",
+     "blob": "22448a2bc113b382d368ef209cc8cf34",
+     "size": 311,
+     "type": "image/svg+xml"
+    },
+    "layers.svg": {
+     "name": "layers.svg",
+     "blob": "b4ffb1b5cdecc23b02bd3f778f59892b",
+     "size": 246,
+     "type": "image/svg+xml"
+    },
+    "program.svg": {
+     "name": "program.svg",
+     "blob": "ecd355e88179c2dc50275bbc626e2320",
+     "size": 247,
+     "type": "image/svg+xml"
+    },
+    "shield.svg": {
+     "name": "shield.svg",
+     "blob": "a8ec6acae1949d378f6313516205a049",
+     "size": 277,
+     "type": "image/svg+xml"
+    },
+    "policy.svg": {
+     "name": "policy.svg",
+     "blob": "5aff538a5573c6d3b3f57dc699912906",
+     "size": 423,
+     "type": "image/svg+xml"
+    },
+    "train.svg": {
+     "name": "train.svg",
+     "blob": "b58b0b7fbaea6210a3b73b93b7decacb",
+     "size": 229,
+     "type": "image/svg+xml"
+    },
+    "chart.svg": {
+     "name": "chart.svg",
+     "blob": "6468befc42f5c8c2d5448ea9003cd1a6",
+     "size": 233,
+     "type": "image/svg+xml"
+    },
+    "terminal.svg": {
+     "name": "terminal.svg",
+     "blob": "4998516269622b87bcf2686e64510d12",
+     "size": 236,
+     "type": "image/svg+xml"
+    },
+    "sliders.svg": {
+     "name": "sliders.svg",
+     "blob": "f55486833e5836b72154e10caa7b77fe",
+     "size": 346,
+     "type": "image/svg+xml"
+    },
+    "warning.svg": {
+     "name": "warning.svg",
+     "blob": "6d9e25006f4bf0f43dbedf1dd1161a92",
+     "size": 238,
+     "type": "image/svg+xml"
+    },
+    "check.svg": {
+     "name": "check.svg",
+     "blob": "f8ed3ab76c65247136671899e5ffec95",
+     "size": 217,
+     "type": "image/svg+xml"
+    },
+    "lock.svg": {
+     "name": "lock.svg",
+     "blob": "babbbf54164cb22ae5f76a2feef14fa3",
+     "size": 242,
+     "type": "image/svg+xml"
+    },
+    "chevron.svg": {
+     "name": "chevron.svg",
+     "blob": "c3d729180e7aa19b0d65f3a2c98dcc21",
+     "size": 219,
+     "type": "image/svg+xml"
+    }
+   }
+  }
+ },
+ "blobs": {},
+ "docs": {
+  "sections": []
+ },
+ "lastChange": {
+  "by": "Claude",
+  "at": "2026-10-09T09:58:09Z",
+  "via": "Claude Code",
+  "note": "First version: tokens, brand book, system flow, screens, 24 components, Workcell and SystemFlow pages, 27 icons."
+ }
+}

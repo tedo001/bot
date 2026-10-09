@@ -1,0 +1,17 @@
+<!-- @dsCard group="Shell" height=150 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Ribbon — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h(V.Ribbon, {active:'run', meta:'cell: tabletop_sort.cell · saved',
+  tabs:[{id:'cell',label:'Workcell',icon:'layers'},{id:'prog',label:'Program',icon:'program'},{id:'run',label:'Run',icon:'play'},{id:'safety',label:'Safety',icon:'shield'},{id:'train',label:'Train',icon:'train'},{id:'diag',label:'Diagnostics',icon:'chart'}],
+  groups:[{label:'Episode',tools:[{icon:'play',label:'Run',primary:true},{icon:'step',label:'Step'},{icon:'pause',label:'Pause',disabled:true},{icon:'stop',label:'Stop',disabled:true},{icon:'reset',label:'Reset'}]},
+          {label:'View',tools:[{icon:'cube',label:'3D'},{icon:'camera',label:'Camera'},{icon:'eye',label:'Overlays'}]},
+          {label:'Robot',tools:[{icon:'jog',label:'Jog'},{icon:'home',label:'Home'}]}],
+  right:h(React.Fragment,null,h(V.StatusPill,{status:'idle'}),h(V.EStop,{compact:true,hotkey:false}))}));
+</script>
+</body>
+</html>

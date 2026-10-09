@@ -1,0 +1,14 @@
+<!-- @dsCard group="Status & safety" height=96 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>StatusPill — preview</title></head>
+<body>
+<div id="root" class="vs-demo"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+  ['idle','loading','running','succeeded','stopped','safety_hold','failed'].map(function(s){ return h(V.StatusPill,{key:s,status:s}); }),
+  h(V.StatusPill,{status:'running',size:'lg'})));
+</script>
+</body>
+</html>

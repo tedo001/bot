@@ -1,0 +1,17 @@
+<!-- @dsCard group="Workcell" height=448 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>PropertyInspector — preview</title></head>
+<body>
+<div id="root" class="vs-demo vs-demo--col"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div',{style:{width:300}}, h(V.PropertyInspector, {title:'Red cube', subtitle:'Objects', icon:'cube', sections:[
+  {title:'Location', columns:3, fields:[{label:'X',value:'-220.0',unit:'mm',kind:'number',axis:'x'},{label:'Y',value:'460.0',unit:'mm',kind:'number',axis:'y'},{label:'Z',value:'25.0',unit:'mm',kind:'number',axis:'z'},{label:'W',value:'0.0',unit:'deg',kind:'number'},{label:'P',value:'0.0',unit:'deg',kind:'number'},{label:'R',value:'12.5',unit:'deg',kind:'number'}]},
+  {title:'Relative to', fields:[{label:'Frame',value:'User frame 1 · table',kind:'select',options:['World','User frame 1 · table','Tool frame 1 · gripper TCP']}]},
+  {title:'Appearance', columns:2, fields:[{label:'Shape',value:'Cube 50 mm',kind:'select',options:['Cube 50 mm','Cylinder 50×60 mm','Sphere 50 mm']},{label:'Label',value:'CUBE',kind:'text'}]},
+  {title:'Behaviour', fields:[{label:'Visible',value:true,kind:'toggle'},{label:'Collision detection',value:true,kind:'toggle'}]}
+]})));
+</script>
+</body>
+</html>

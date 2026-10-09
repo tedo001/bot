@@ -1,0 +1,158 @@
+<!-- @dsCard group="Pages" height=1100 width=1280 page subtitle="Operator journey, run states and the data loop" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>System flow — page</title>
+<style>
+  html, body { margin: 0; }
+  .flow { width: 1280px; box-sizing: border-box; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); background: var(--surface); }
+  .flow__head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); }
+  .flow__title { margin: 0; font: 600 20px/24px var(--font-display); }
+  .flow__sub { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--ink-muted); }
+  .flow__legend { display: flex; gap: var(--space-4); align-items: center; font-size: 11px; color: var(--ink-muted); }
+  .flow__legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 22px; height: 12px; border-radius: 3px; border: 1px solid var(--line-strong); background: var(--surface-raised); }
+  .sw--drive { background: var(--drive-soft); border-color: var(--drive); }
+  .sw--busy { background: var(--busy-soft); border-color: var(--busy); }
+  .sw--gate { width: 22px; height: 0; border: 0; border-top: 2px dashed var(--ink-muted); border-radius: 0; }
+  .flow svg { display: block; width: 100%; height: auto; }
+  .n { fill: var(--surface-raised); stroke: var(--line-strong); stroke-width: 1; }
+  .n--sunken { fill: var(--surface-sunken); }
+  .n--drive { fill: var(--drive-soft); stroke: var(--drive); }
+  .n--busy { fill: var(--busy-soft); stroke: var(--busy); }
+  .n--ok { fill: var(--ok-soft); stroke: var(--ok); }
+  .n--hold { fill: var(--hold-soft); stroke: var(--hold); }
+  .n--danger { fill: var(--danger-soft); stroke: var(--danger); }
+  .t { font: 600 13px var(--font-sans); fill: var(--ink); text-anchor: middle; }
+  .s { font: 400 11px var(--font-sans); fill: var(--ink-muted); text-anchor: middle; }
+  .st { font: 700 12px var(--font-display); letter-spacing: .04em; text-anchor: middle; fill: var(--ink); }
+  .st--drive { fill: var(--drive); } .st--busy { fill: var(--busy); } .st--ok { fill: var(--ok); } .st--hold { fill: var(--hold); } .st--danger { fill: var(--danger); }
+  .e { stroke: var(--ink-muted); stroke-width: 1.5; fill: none; }
+  .e--gate { stroke-dasharray: 5 4; }
+  .l { font: 400 11px var(--font-sans); fill: var(--ink-muted); paint-order: stroke; stroke: var(--surface-raised); stroke-width: 4px; stroke-linejoin: round; }
+  .l--mono { font-family: var(--font-mono); font-size: 10px; }
+  .ah { fill: var(--ink-muted); }
+  .es-box { fill: var(--surface-raised); stroke: var(--estop); stroke-width: 2; }
+  .es-head { fill: var(--estop); }
+  .es-title { font: 700 12px var(--font-display); letter-spacing: .06em; fill: var(--on-estop); }
+  .es-text { font: 400 12px var(--font-sans); fill: var(--ink); }
+  .num { font: 600 10px var(--font-mono); fill: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="flow">
+  <div class="flow__head">
+    <div>
+      <h1 class="flow__title">System flow</h1>
+      <p class="flow__sub">How the operator moves through the studio, how the run state moves underneath, and the loop that drives the arm.</p>
+    </div>
+    <div class="flow__legend">
+      <span><i class="sw"></i>screen / step</span>
+      <span><i class="sw sw--drive"></i>RUNNING</span>
+      <span><i class="sw sw--busy"></i>LOADING</span>
+      <span><i class="sw sw--gate"></i>gate (blocks until met)</span>
+    </div>
+  </div>
+
+  <section class="vs-panel">
+    <header class="vs-panel__head"><h3 class="vs-panel__title">1 · Operator journey</h3><span class="vs-panel__meta">7 steps · 4 side flows</span></header>
+    <div class="vs-panel__body">
+      <svg viewBox="0 0 1232 300" role="img" aria-label="Operator journey: preflight, load, workcell, program, preview, run, review, with side flows for fixes, safety, teach and jog, and training">
+        <defs><marker id="ahA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker></defs>
+        <!-- loop: review -> program -->
+        <path class="e" d="M1138 48V26q0-4-4-4H620q-4 0-4 4V48" marker-end="url(#ahA)"/>
+        <text class="l" x="877" y="17" text-anchor="middle">next instruction, or reword after FAILED</text>
+        <!-- main row -->
+        <rect class="n" x="20" y="48" width="148" height="56" rx="6"/><text class="t" x="94" y="72">Preflight</text><text class="s" x="94" y="90">environment checks</text>
+        <rect class="n n--busy" x="194" y="48" width="148" height="56" rx="6"/><text class="t" x="268" y="72">Load models</text><text class="s" x="268" y="90">LOADING · models</text>
+        <rect class="n" x="368" y="48" width="148" height="56" rx="6"/><text class="t" x="442" y="72">Workcell</text><text class="s" x="442" y="90">robot, objects, frames</text>
+        <rect class="n" x="542" y="48" width="148" height="56" rx="6"/><text class="t" x="616" y="72">Program</text><text class="s" x="616" y="90">instruction or blocks</text>
+        <rect class="n" x="716" y="48" width="148" height="56" rx="6"/><text class="t" x="790" y="72">Preview</text><text class="s" x="790" y="90">dry run: SRC → DST, plan</text>
+        <rect class="n n--drive" x="890" y="48" width="148" height="56" rx="6"/><text class="t" x="964" y="72">Run</text><text class="s" x="964" y="90">watch, step, stop</text>
+        <rect class="n" x="1064" y="48" width="148" height="56" rx="6"/><text class="t" x="1138" y="72">Review</text><text class="s" x="1138" y="90">result, episode, console</text>
+        <path class="e" d="M168 76H192" marker-end="url(#ahA)"/>
+        <path class="e" d="M342 76H366" marker-end="url(#ahA)"/>
+        <path class="e" d="M516 76H540" marker-end="url(#ahA)"/>
+        <path class="e" d="M690 76H714" marker-end="url(#ahA)"/>
+        <path class="e" d="M864 76H888" marker-end="url(#ahA)"/>
+        <path class="e" d="M1038 76H1062" marker-end="url(#ahA)"/>
+        <!-- preflight fail loop -->
+        <path class="e" d="M74 104V194" marker-end="url(#ahA)"/><text class="l" x="66" y="154" text-anchor="end">FAIL</text>
+        <path class="e" d="M114 196V106" marker-end="url(#ahA)"/><text class="l" x="122" y="154">re-run</text>
+        <rect class="n n--sunken" x="20" y="196" width="148" height="56" rx="6"/><text class="t" x="94" y="220">Fix and retry</text><text class="s" x="94" y="238">exact fix per check</text>
+        <!-- safety -->
+        <path class="e" d="M442 104V194" marker-end="url(#ahA)"/><text class="l" x="450" y="154">set limits, zones</text>
+        <rect class="n n--sunken" x="368" y="196" width="148" height="56" rx="6"/><text class="t" x="442" y="220">Safety config</text><text class="s" x="442" y="238">apply, verify checksum</text>
+        <path class="e e--gate" d="M442 252V278H938V106" marker-end="url(#ahA)"/><text class="l" x="690" y="294" text-anchor="middle">gates Run: no CHANGED or FAULT rows</text>
+        <!-- teach and jog -->
+        <path class="e" d="M616 106V194" marker-start="url(#ahA)" marker-end="url(#ahA)"/><text class="l" x="624" y="154">jog, record pose P[n]</text>
+        <rect class="n n--sunken" x="542" y="196" width="148" height="56" rx="6"/><text class="t" x="616" y="220">Teach and jog</text><text class="s" x="616" y="238">deadman, ≤ 25% speed</text>
+        <!-- training -->
+        <path class="e" d="M1138 104V194" marker-end="url(#ahA)"/><text class="l" x="1146" y="154">policy not good enough</text>
+        <rect class="n n--sunken" x="1064" y="196" width="148" height="56" rx="6"/><text class="t" x="1138" y="220">Train policy</text><text class="s" x="1138" y="238">demos → epochs → eval</text>
+        <path class="e" d="M1064 224H994q-4 0-4-4V106" marker-end="url(#ahA)"/><text class="l" x="998" y="182">switch in</text><text class="l" x="998" y="196">new model</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="vs-panel">
+    <header class="vs-panel__head"><h3 class="vs-panel__title">2 · Run states</h3><span class="vs-panel__meta">RunStatus · RobotController</span></header>
+    <div class="vs-panel__body">
+      <svg viewBox="0 0 1232 362" role="img" aria-label="Run state machine: idle, loading, running, safety hold, succeeded, failed, stopped, with the E-STOP latch over every state">
+        <defs><marker id="ahB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker></defs>
+        <!-- edges first, nodes on top -->
+        <path class="e" d="M105 80V168" marker-end="url(#ahB)"/><text class="l" x="97" y="128" text-anchor="end">ready</text>
+        <path class="e" d="M145 170V82" marker-end="url(#ahB)"/><text class="l" x="153" y="122">switch policy or model</text><text class="l" x="153" y="136">(brain swaps between ticks)</text>
+        <path class="e" d="M200 190H428" marker-end="url(#ahB)"/><text class="l" x="315" y="182" text-anchor="middle">Run · Ctrl+Enter</text><text class="l" x="315" y="206" text-anchor="middle">valid instruction</text>
+        <path class="e" d="M490 170V82" marker-end="url(#ahB)"/><text class="l" x="482" y="112" text-anchor="end">person in view</text><text class="l" x="482" y="126" text-anchor="end">watchdog 0.5 s</text><text class="l" x="482" y="140" text-anchor="end">inference over 2 s</text>
+        <path class="e" d="M530 80V168" marker-end="url(#ahB)"/><text class="l" x="538" y="126">cause clears</text>
+        <path class="e" d="M565 170L798 89" marker-end="url(#ahB)"/><text class="l" x="724" y="138">done twice in a row</text>
+        <path class="e" d="M590 190H798" marker-end="url(#ahB)"/><text class="l" x="695" y="182" text-anchor="middle">no object matches</text><text class="l" x="695" y="206" text-anchor="middle">or episode error</text>
+        <path class="e" d="M565 210L798 293" marker-end="url(#ahB)"/><text class="l" x="664" y="272" text-anchor="end">Stop pressed</text>
+        <path class="e" d="M960 80H990M960 190H990M960 300H990M990 80V336H125V212" marker-end="url(#ahB)"/><text class="l" x="560" y="354" text-anchor="middle">Run again or Reset scene → IDLE</text>
+        <!-- states -->
+        <rect class="n n--busy" x="50" y="40" width="150" height="40" rx="20"/><text class="st st--busy" x="125" y="64">LOADING</text>
+        <rect class="n n--sunken" x="50" y="170" width="150" height="40" rx="20"/><text class="st" x="125" y="194">IDLE</text>
+        <rect class="n n--drive" x="430" y="170" width="160" height="40" rx="20"/><text class="st st--drive" x="510" y="194">RUNNING</text>
+        <rect class="n n--hold" x="430" y="40" width="160" height="40" rx="20"/><text class="st st--hold" x="510" y="64">SAFETY HOLD</text>
+        <rect class="n n--ok" x="800" y="60" width="160" height="40" rx="20"/><text class="st st--ok" x="880" y="84">SUCCEEDED</text>
+        <rect class="n n--danger" x="800" y="170" width="160" height="40" rx="20"/><text class="st st--danger" x="880" y="194">FAILED</text>
+        <rect class="n" x="800" y="280" width="160" height="40" rx="20"/><text class="st" x="880" y="304">STOPPED</text>
+        <!-- E-STOP latch -->
+        <rect class="es-box" x="1036" y="40" width="176" height="280" rx="6"/>
+        <path class="es-head" d="M1042 40h164a6 6 0 0 1 6 6v28h-176v-28a6 6 0 0 1 6-6z"/>
+        <text class="es-title" x="1052" y="62">E-STOP LATCH</text>
+        <text class="es-text" x="1052" y="100">Esc or the button,</text>
+        <text class="es-text" x="1052" y="118">from any state.</text>
+        <text class="es-text" x="1052" y="146">Every command is</text>
+        <text class="es-text" x="1052" y="164">zeroed at once.</text>
+        <text class="es-text" x="1052" y="192">Holds through episode</text>
+        <text class="es-text" x="1052" y="210">end and scene reset.</text>
+        <text class="es-text" x="1052" y="238">Release → STOPPED,</text>
+        <text class="es-text" x="1052" y="256">never straight back</text>
+        <text class="es-text" x="1052" y="274">into motion.</text>
+      </svg>
+    </div>
+  </section>
+
+  <section class="vs-panel">
+    <header class="vs-panel__head"><h3 class="vs-panel__title">3 · Data loop</h3><span class="vs-panel__meta">control 20 Hz · UI 10 Hz</span></header>
+    <div class="vs-panel__body">
+      <svg viewBox="0 0 1232 150" role="img" aria-label="Data loop: simulator frame to perception, scene index to brain, action command to robot controller, joint deltas back to the simulator, system state to the studio UI">
+        <defs><marker id="ahC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker></defs>
+        <path class="e" d="M1116 40V20q0-4-4-4H604q-4 0-4 4V38" marker-end="url(#ahC)"/><text class="l" x="860" y="12" text-anchor="middle">instruction (InstructionPayload) · Run</text>
+        <rect class="n" x="20" y="40" width="160" height="52" rx="6"/><text class="t" x="100" y="62">Simulator</text><text class="s" x="100" y="80">MuJoCo · PyBullet · 2D</text>
+        <rect class="n" x="270" y="40" width="160" height="52" rx="6"/><text class="t" x="350" y="62">Perception</text><text class="s" x="350" y="80">RT-DETR · RF-DETR · OCR</text>
+        <rect class="n" x="520" y="40" width="160" height="52" rx="6"/><text class="t" x="600" y="62">Brain</text><text class="s" x="600" y="80">learned policy · VLA clients</text>
+        <rect class="n" x="770" y="40" width="160" height="52" rx="6"/><text class="t" x="850" y="62">RobotController</text><text class="s" x="850" y="80">E-STOP · hold · watchdog</text>
+        <rect class="n n--sunken" x="1020" y="40" width="192" height="52" rx="6"/><text class="t" x="1116" y="62">Studio UI</text><text class="s" x="1116" y="80">pill · plan · telemetry · viewport</text>
+        <path class="e" d="M180 66H268" marker-end="url(#ahC)"/><text class="l l--mono" x="225" y="58" text-anchor="middle">frame</text>
+        <path class="e" d="M430 66H518" marker-end="url(#ahC)"/><text class="l l--mono" x="475" y="58" text-anchor="middle">SceneIndex</text>
+        <path class="e" d="M680 66H768" marker-end="url(#ahC)"/><text class="l l--mono" x="725" y="58" text-anchor="middle">ActionCommand</text>
+        <path class="e" d="M930 66H1018" marker-end="url(#ahC)"/><text class="l l--mono" x="975" y="58" text-anchor="middle">SystemState</text>
+        <path class="e" d="M850 92V118q0 4-4 4H104q-4 0-4-4V94" marker-end="url(#ahC)"/><text class="l" x="475" y="140" text-anchor="middle">joint deltas, rate-limited · 20 Hz · never waits on perception or rendering</text>
+      </svg>
+    </div>
+  </section>
+</div>
+</body>
+</html>

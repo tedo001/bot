@@ -1,0 +1,49 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VLA Robot Studio</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--surface); color: var(--ink); font-family: var(--font-sans); overflow: hidden; }
+  .cover { position: relative; width: 960px; height: 288px; overflow: hidden; }
+  .art { position: absolute; top: 0; left: 480px; width: 480px; height: 288px; overflow: hidden; }
+  .art svg { display: block; width: 480px; height: 288px; }
+  .drive { fill: var(--drive); }
+  .deep { fill: var(--ink); }
+  .hazard { fill: var(--hazard); }
+  .steel { fill: var(--line-strong); }
+  .estop { fill: var(--estop); }
+  .blk { rx: var(--radius-md); }
+  .plus { stroke: var(--surface); stroke-width: 2; stroke-linecap: square; }
+  .words { position: absolute; left: var(--space-5); bottom: var(--space-5); max-width: 440px; }
+  .name { margin: 0; font: 700 80px/.92 var(--font-display); letter-spacing: -.01em; color: var(--ink); }
+  .tag { margin: var(--space-3) 0 0 2px; font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      drive 96×264 (left dock) · ink 248×264 (viewport) · hazard 128×128 bled off the right edge · line-strong 128×128 under it carrying one estop disc 48 (the E-STOP button) · all bled off the top, ≈44% of 960×288
+  arrangement a flush modular grid that is the studio's own dock layout: left dock, viewport, right dock, space-2 gutters, bottoms on one line space-6 above the edge
+  pattern     a plus grid, from "precise, technical, mono, a 4px grid": the CAD viewport grid, 56 pluses at a space-6 pitch cut from the ink block in surface
+  scales      gutters space-2 (8); pitch space-6 (32); plus arms space-2; corners radius-md; disc radius-full (rx = 24, half of 48)
+-->
+<rect class="drive blk" x="0" y="-8" width="96" height="264" rx="6"/>
+<rect class="deep blk" x="104" y="-8" width="248" height="264" rx="6"/>
+<rect class="hazard blk" x="360" y="-8" width="128" height="128" rx="6"/>
+<rect class="steel blk" x="360" y="128" width="128" height="128" rx="6"/>
+<circle class="estop" cx="424" cy="192" r="24"/>
+<g><path class="plus" d="M128 20h8M132 16v8"/><path class="plus" d="M128 52h8M132 48v8"/><path class="plus" d="M128 84h8M132 80v8"/><path class="plus" d="M128 116h8M132 112v8"/><path class="plus" d="M128 148h8M132 144v8"/><path class="plus" d="M128 180h8M132 176v8"/><path class="plus" d="M128 212h8M132 208v8"/><path class="plus" d="M128 244h8M132 240v8"/><path class="plus" d="M160 20h8M164 16v8"/><path class="plus" d="M160 52h8M164 48v8"/><path class="plus" d="M160 84h8M164 80v8"/><path class="plus" d="M160 116h8M164 112v8"/><path class="plus" d="M160 148h8M164 144v8"/><path class="plus" d="M160 180h8M164 176v8"/><path class="plus" d="M160 212h8M164 208v8"/><path class="plus" d="M160 244h8M164 240v8"/><path class="plus" d="M192 20h8M196 16v8"/><path class="plus" d="M192 52h8M196 48v8"/><path class="plus" d="M192 84h8M196 80v8"/><path class="plus" d="M192 116h8M196 112v8"/><path class="plus" d="M192 148h8M196 144v8"/><path class="plus" d="M192 180h8M196 176v8"/><path class="plus" d="M192 212h8M196 208v8"/><path class="plus" d="M192 244h8M196 240v8"/><path class="plus" d="M224 20h8M228 16v8"/><path class="plus" d="M224 52h8M228 48v8"/><path class="plus" d="M224 84h8M228 80v8"/><path class="plus" d="M224 116h8M228 112v8"/><path class="plus" d="M224 148h8M228 144v8"/><path class="plus" d="M224 180h8M228 176v8"/><path class="plus" d="M224 212h8M228 208v8"/><path class="plus" d="M224 244h8M228 240v8"/><path class="plus" d="M256 20h8M260 16v8"/><path class="plus" d="M256 52h8M260 48v8"/><path class="plus" d="M256 84h8M260 80v8"/><path class="plus" d="M256 116h8M260 112v8"/><path class="plus" d="M256 148h8M260 144v8"/><path class="plus" d="M256 180h8M260 176v8"/><path class="plus" d="M256 212h8M260 208v8"/><path class="plus" d="M256 244h8M260 240v8"/><path class="plus" d="M288 20h8M292 16v8"/><path class="plus" d="M288 52h8M292 48v8"/><path class="plus" d="M288 84h8M292 80v8"/><path class="plus" d="M288 116h8M292 112v8"/><path class="plus" d="M288 148h8M292 144v8"/><path class="plus" d="M288 180h8M292 176v8"/><path class="plus" d="M288 212h8M292 208v8"/><path class="plus" d="M288 244h8M292 240v8"/><path class="plus" d="M320 20h8M324 16v8"/><path class="plus" d="M320 52h8M324 48v8"/><path class="plus" d="M320 84h8M324 80v8"/><path class="plus" d="M320 116h8M324 112v8"/><path class="plus" d="M320 148h8M324 144v8"/><path class="plus" d="M320 180h8M324 176v8"/><path class="plus" d="M320 212h8M324 208v8"/><path class="plus" d="M320 244h8M324 240v8"/></g>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">VLA Robot<br>Studio</h1>
+<p class="tag">Calm while things are fine, impossible to misread when they are not.</p>
+</div>
+</div>
+</body>
+</html>

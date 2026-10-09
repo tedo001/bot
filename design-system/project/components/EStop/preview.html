@@ -1,0 +1,15 @@
+<!-- @dsCard group="Status & safety" height=112 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>EStop — preview</title></head>
+<body>
+<div id="root" class="vs-demo"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+  h(V.EStop, {hotkey:false}),
+  h(V.EStop, {defaultEngaged:true, hotkey:false}),
+  h(V.EStop, {compact:true, hotkey:false})));
+</script>
+</body>
+</html>

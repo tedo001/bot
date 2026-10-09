@@ -1,0 +1,14 @@
+<!-- @dsCard group="Robot" height=186 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>PoseReadout — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+var V = window.VLAStudio, h = React.createElement;
+ReactDOM.createRoot(document.getElementById('root')).render(h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,padding:16}},
+  h(V.PoseReadout, {pose:{x:0.050,y:0.550,z:0.300,w:180,p:0,r:90}, gripper:{opening:0.0, holding:'cube'}}),
+  h(V.PoseReadout, {pose:{x:-0.218,y:0.461,z:0.112,w:179.6,p:-0.4,r:88.2}, gripper:{opening:0.8}, stale:'1.2 s'})));
+</script>
+</body>
+</html>
